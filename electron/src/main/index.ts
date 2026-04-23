@@ -18,7 +18,7 @@ function createWindow() {
   })
 
   // 开发模式加载vite dev server
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     mainWindow.loadURL('http://localhost:5173')
     mainWindow.webContents.openDevTools()
   } else {
