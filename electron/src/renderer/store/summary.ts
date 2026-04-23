@@ -29,8 +29,8 @@ export const useSummaryStore = defineStore('summary', () => {
       } else {
         error.value = response.data.message || '获取总结失败'
       }
-    } catch (e: any) {
-      error.value = e.message || '网络错误'
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : '网络错误'
     } finally {
       loading.value = false
     }
@@ -46,8 +46,8 @@ export const useSummaryStore = defineStore('summary', () => {
       } else {
         error.value = response.data.message || '获取总结失败'
       }
-    } catch (e: any) {
-      error.value = e.message || '网络错误'
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : '网络错误'
     } finally {
       loading.value = false
     }

@@ -30,7 +30,7 @@ export const useChatStore = defineStore('chat', () => {
     return groups
   })
 
-  async function sendMessage(content: string, userContext?: any) {
+  async function sendMessage(content: string, userContext?: Record<string, any>) {
     if (!content.trim()) return
 
     // 添加用户消息
@@ -51,13 +51,17 @@ export const useChatStore = defineStore('chat', () => {
       })
 
       // 添加AI回复
-      messages.value.push({
-        role: 'assistant',
-        content: response.data.reply,
-        timestamp: new Date(),
-      })
-    } catch (e: any) {
-      error.value = e.message || '发送失败'
+      if (response.data.status === 'success' && response.data.reply) {
+        messages.value.push({
+          role: 'assistant',
+          content: response.data.reply,
+          timestamp: new Date(),
+        })
+      } else {
+        error.value = response.data.message || '获取回复失败'
+      }
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : '发送失败'
     } finally {
       loading.value = false
     }
