@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+    <GlobalError />
     <nav class="nav">
       <router-link to="/">每日夸夸</router-link>
       <router-link to="/chat">聊天陪伴</router-link>
@@ -12,6 +13,7 @@
 </template>
 
 <script setup lang="ts">
+import GlobalError from '@/components/GlobalError.vue'
 </script>
 
 <style>

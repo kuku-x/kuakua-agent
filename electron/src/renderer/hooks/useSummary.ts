@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { useSummaryStore, type SummaryData } from '@/store/summary'
+import { useSummaryStore } from '@/store/summary'
 
 export function useSummary() {
   const store = useSummaryStore()

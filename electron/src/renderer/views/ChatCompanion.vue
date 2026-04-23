@@ -10,13 +10,15 @@
 
         <div
           v-for="(msg, index) in store.messages"
-          :key="index"
+          :key="msg.id"
           class="message"
-          :class="msg.role"
+          :class="[msg.role, msg.status]"
         >
           <div class="bubble">{{ msg.content }}</div>
         </div>
       </div>
+
+      <p v-if="store.error" class="chat-error">{{ store.error }}</p>
 
       <div class="input-area">
         <textarea
@@ -25,7 +27,7 @@
           @keydown.enter.exact.prevent="sendMessage"
           rows="2"
         ></textarea>
-        <button @click="sendMessage" :disabled="store.loading">
+        <button @click="sendMessage" :disabled="store.loading || !inputMessage.trim()">
           {{ store.loading ? '发送中...' : '发送' }}
         </button>
       </div>
@@ -125,6 +127,16 @@ h1 {
 .message.assistant .bubble {
   background: #f5f5f5;
   color: #333;
+}
+
+.message.failed .bubble {
+  border: 1px solid #ffccc7;
+}
+
+.chat-error {
+  padding: 0 16px 8px;
+  color: #ff4d4f;
+  font-size: 13px;
 }
 
 .input-area {

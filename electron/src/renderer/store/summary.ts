@@ -1,18 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getTodaySummary, getSummary } from '@/api'
+import type { SummaryData } from '@/types/api'
+import { handleApiError } from '@/utils/error'
+import { normalizeSummary } from '@/utils/validation'
 
-export interface SummaryData {
-  date: string
-  total_hours: number
-  work_hours: number
-  entertainment_hours: number
-  other_hours: number
-  top_apps: Array<{ name: string; duration: number; category: string }>
-  focus_score: number
-  praise_text: string
-  suggestions: string[]
-}
+export type { SummaryData }
 
 export const useSummaryStore = defineStore('summary', () => {
   const summary = ref<SummaryData | null>(null)
@@ -25,12 +18,12 @@ export const useSummaryStore = defineStore('summary', () => {
     try {
       const response = await getTodaySummary()
       if (response.data.status === 'success' && response.data.data) {
-        summary.value = response.data.data
+        summary.value = normalizeSummary(response.data.data)
       } else {
         error.value = response.data.message || '获取总结失败'
       }
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : '网络错误'
+      error.value = handleApiError(e)
     } finally {
       loading.value = false
     }
@@ -42,12 +35,12 @@ export const useSummaryStore = defineStore('summary', () => {
     try {
       const response = await getSummary(date)
       if (response.data.status === 'success' && response.data.data) {
-        summary.value = response.data.data
+        summary.value = normalizeSummary(response.data.data)
       } else {
         error.value = response.data.message || '获取总结失败'
       }
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : '网络错误'
+      error.value = handleApiError(e)
     } finally {
       loading.value = false
     }
@@ -55,3 +48,4 @@ export const useSummaryStore = defineStore('summary', () => {
 
   return { summary, loading, error, fetchTodaySummary, fetchSummary }
 })
+

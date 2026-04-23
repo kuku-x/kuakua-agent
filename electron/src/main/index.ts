@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 
 let mainWindow: BrowserWindow | null = null
+const DEV_SERVER_URL = 'http://localhost:5173'
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -13,13 +14,22 @@ function createWindow() {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
     },
     title: '夸夸Agent',
   })
 
-  // 开发模式加载vite dev server
-  if (import.meta.env.DEV) {
-    mainWindow.loadURL('http://localhost:5173')
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const allowedUrl = app.isPackaged ? url.startsWith('file://') : url.startsWith(DEV_SERVER_URL)
+    if (!allowedUrl) {
+      event.preventDefault()
+    }
+  })
+
+  if (!app.isPackaged) {
+    mainWindow.loadURL(DEV_SERVER_URL)
     mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))

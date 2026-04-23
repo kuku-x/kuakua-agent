@@ -22,7 +22,7 @@
         <h3>今日应用</h3>
         <div class="app-item" v-for="app in store.summary.top_apps" :key="app.name">
           <span class="app-name">{{ app.name }}</span>
-          <span class="app-duration">{{ app.duration.toFixed(1) }}h</span>
+          <span class="app-duration">{{ formatDuration(app.duration) }}</span>
           <span class="app-category" :class="app.category">{{ app.category }}</span>
         </div>
       </div>
@@ -39,6 +39,7 @@ import { onMounted } from 'vue'
 import { useSummaryStore } from '@/store/summary'
 import SummaryCard from '@/components/SummaryCard.vue'
 import TimePieChart from '@/components/TimePieChart.vue'
+import { formatDuration } from '@/utils/format'
 
 const store = useSummaryStore()
 

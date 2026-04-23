@@ -1,11 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { sendChat } from '@/api'
+import type { ChatContext } from '@/types/api'
+import { handleApiError } from '@/utils/error'
+import { normalizeChatResponse } from '@/utils/validation'
 
 export interface ChatMessage {
+  id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  status: 'sending' | 'sent' | 'failed'
 }
 
 export const useChatStore = defineStore('chat', () => {
@@ -30,14 +35,18 @@ export const useChatStore = defineStore('chat', () => {
     return groups
   })
 
-  async function sendMessage(content: string, userContext?: Record<string, any>) {
-    if (!content.trim()) return
+  async function sendMessage(content: string, userContext?: ChatContext) {
+    const trimmed = content.trim()
+    if (loading.value || !trimmed) return
 
-    // 添加用户消息
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    const messageIndex = messages.value.length
     messages.value.push({
+      id: messageId,
       role: 'user',
-      content,
+      content: trimmed,
       timestamp: new Date(),
+      status: 'sending',
     })
 
     loading.value = true
@@ -46,22 +55,27 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const response = await sendChat({
         chat_id: chatId.value,
-        message: content,
+        message: trimmed,
         user_context: userContext,
       })
 
-      // 添加AI回复
-      if (response.data.status === 'success' && response.data.reply) {
+      if (response.data.status === 'success' && response.data.data) {
+        const data = normalizeChatResponse(response.data.data)
+        messages.value[messageIndex].status = 'sent'
         messages.value.push({
+          id: `msg_${Date.now()}_${Math.random().toString(36).slice(2)}`,
           role: 'assistant',
-          content: response.data.reply,
+          content: data.reply,
           timestamp: new Date(),
+          status: 'sent',
         })
       } else {
         error.value = response.data.message || '获取回复失败'
+        messages.value[messageIndex].status = 'failed'
       }
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : '发送失败'
+      error.value = handleApiError(e)
+      messages.value[messageIndex].status = 'failed'
     } finally {
       loading.value = false
     }
@@ -74,3 +88,4 @@ export const useChatStore = defineStore('chat', () => {
 
   return { messages, chatId, loading, error, groupedMessages, sendMessage, resetChat }
 })
+

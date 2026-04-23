@@ -1,0 +1,52 @@
+export interface ApiResponse<T> {
+  status: 'success'
+  data: T
+  message?: string | null
+}
+
+export interface AppUsage {
+  name: string
+  duration: number
+  category: 'work' | 'entertainment' | 'other' | string
+}
+
+export interface SummaryData {
+  date: string
+  total_hours: number
+  work_hours: number
+  entertainment_hours: number
+  other_hours: number
+  top_apps: AppUsage[]
+  focus_score: number
+  praise_text: string
+  suggestions: string[]
+}
+
+export interface ChatContext {
+  total_hours?: number
+  work_hours?: number
+  entertainment_hours?: number
+}
+
+export interface ChatRequest {
+  chat_id: string
+  message: string
+  user_context?: ChatContext
+}
+
+export interface ChatResponse {
+  reply: string
+}
+
+export interface SettingsPayload {
+  aw_server_url: string
+  data_masking: boolean
+  doubao_api_key?: string
+}
+
+export interface SettingsResponse {
+  aw_server_url: string
+  data_masking: boolean
+  doubao_api_key_set: boolean
+}
+

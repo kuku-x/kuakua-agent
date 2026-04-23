@@ -5,21 +5,13 @@
     <div class="settings-form">
       <div class="form-item">
         <label>豆包API密钥</label>
-        <input
-          type="password"
-          v-model="settings.doubao_api_key"
-          placeholder="请输入API密钥"
-        />
-        <span class="hint">用于调用AI生成夸夸和聊天</span>
+        <input type="password" v-model="apiKeyInput" placeholder="请输入新的API密钥" />
+        <span class="hint">{{ apiKeySet ? '已配置密钥；留空则保持不变' : '用于调用AI生成夸夸和聊天' }}</span>
       </div>
 
       <div class="form-item">
         <label>ActivityWatch地址</label>
-        <input
-          type="text"
-          v-model="settings.aw_server_url"
-          placeholder="http://127.0.0.1:5600"
-        />
+        <input type="text" v-model="settings.aw_server_url" placeholder="http://127.0.0.1:5600" />
         <span class="hint">ActivityWatch服务的地址</span>
       </div>
 
@@ -44,9 +36,7 @@
 
     <div class="danger-zone">
       <h3>危险区域</h3>
-      <button class="danger-btn" @click="confirmDelete">
-        删除所有数据
-      </button>
+      <button class="danger-btn" @click="confirmDelete">删除所有数据</button>
       <span class="hint">删除后无法恢复</span>
     </div>
   </div>
@@ -55,28 +45,29 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getSettings, updateSettings, deleteAllData } from '@/api'
+import type { SettingsPayload, SettingsResponse } from '@/types/api'
+import { handleApiError } from '@/utils/error'
+import { normalizeSettings } from '@/utils/validation'
 
-const settings = ref({
-  doubao_api_key: '',
+const settings = ref<SettingsResponse>({
   aw_server_url: 'http://127.0.0.1:5600',
   data_masking: false,
+  doubao_api_key_set: false,
 })
 
+const apiKeyInput = ref('')
+const apiKeySet = ref(false)
 const saving = ref(false)
 const saveMessage = ref('')
 const saveSuccess = ref(false)
 
 onMounted(async () => {
   try {
-    const response = await getSettings()
-    const data = response.data
-    settings.value.aw_server_url = data.aw_server_url
-    settings.value.data_masking = data.data_masking
-    if (data.doubao_api_key_set) {
-      settings.value.doubao_api_key = '********'
-    }
-  } catch (e) {
-    console.error('获取设置失败', e)
+    settings.value = normalizeSettings((await getSettings()).data)
+    apiKeySet.value = settings.value.doubao_api_key_set
+  } catch (e: unknown) {
+    saveSuccess.value = false
+    saveMessage.value = handleApiError(e)
   }
 })
 
@@ -85,25 +76,25 @@ async function saveSettings() {
   saveMessage.value = ''
 
   try {
-    const payload: Record<string, any> = {
+    const payload: SettingsPayload = {
       aw_server_url: settings.value.aw_server_url,
       data_masking: settings.value.data_masking,
     }
 
-    if (settings.value.doubao_api_key && settings.value.doubao_api_key !== '********') {
-      payload.doubao_api_key = settings.value.doubao_api_key
+    const trimmedApiKey = apiKeyInput.value.trim()
+    if (trimmedApiKey) {
+      payload.doubao_api_key = trimmedApiKey
     }
 
-    await updateSettings(payload)
+    const response = await updateSettings(payload)
+    settings.value = normalizeSettings(response.data.data)
+    apiKeySet.value = settings.value.doubao_api_key_set
+    apiKeyInput.value = ''
     saveSuccess.value = true
     saveMessage.value = '设置保存成功'
-
-    if (settings.value.doubao_api_key === '********') {
-      settings.value.doubao_api_key = ''
-    }
-  } catch (e: any) {
+  } catch (e: unknown) {
     saveSuccess.value = false
-    saveMessage.value = e.response?.data?.detail || '保存失败'
+    saveMessage.value = handleApiError(e)
   } finally {
     saving.value = false
   }
@@ -116,9 +107,11 @@ async function confirmDelete() {
 
   try {
     await deleteAllData()
-    alert('所有数据已删除')
-  } catch (e) {
-    alert('删除失败')
+    saveSuccess.value = true
+    saveMessage.value = '所有数据已删除'
+  } catch (e: unknown) {
+    saveSuccess.value = false
+    saveMessage.value = handleApiError(e)
   }
 }
 </script>
@@ -137,7 +130,7 @@ h1 {
 .settings-form {
   background: #fff;
   padding: 24px;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .form-item {
@@ -168,7 +161,7 @@ input:focus {
   display: block;
   margin-top: 4px;
   font-size: 12px;
-  color: #999;
+  color: #666;
 }
 
 .form-actions {
@@ -198,13 +191,13 @@ button:disabled {
 
 .save-message.success {
   background: #f6ffed;
-  color: #52c41a;
+  color: #237804;
   border: 1px solid #b7eb8f;
 }
 
 .save-message.error {
   background: #fff2f0;
-  color: #ff4d4f;
+  color: #a8071a;
   border: 1px solid #ffccc7;
 }
 
@@ -212,12 +205,12 @@ button:disabled {
   margin-top: 48px;
   padding: 24px;
   background: #fff;
-  border-radius: 12px;
   border: 1px solid #ffccc7;
+  border-radius: 8px;
 }
 
 .danger-zone h3 {
-  color: #ff4d4f;
+  color: #a8071a;
   margin-bottom: 16px;
 }
 
