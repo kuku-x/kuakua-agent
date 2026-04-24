@@ -54,8 +54,18 @@ class PreferenceStore:
 
     def get_int(self, key: str, default: int = 0) -> int:
         v = self.get(key)
-        return int(v) if v else default
+        if not v:
+            return default
+        try:
+            return int(v)
+        except ValueError:
+            return default
 
     def get_float(self, key: str, default: float = 1.0) -> float:
         v = self.get(key)
-        return float(v) if v else default
+        if not v:
+            return default
+        try:
+            return float(v)
+        except ValueError:
+            return default

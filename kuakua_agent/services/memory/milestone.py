@@ -16,6 +16,8 @@ class MilestoneStore:
             )
             conn.commit()
             row = conn.execute("SELECT * FROM milestones WHERE id = ?", (cursor.lastrowid,)).fetchone()
+            if row is None:
+                raise ValueError(f"Milestone not found after insert: id={cursor.lastrowid}")
             return Milestone.from_row(row)
 
     def get_recent(self, hours: int = 24, limit: int = 10) -> list[Milestone]:

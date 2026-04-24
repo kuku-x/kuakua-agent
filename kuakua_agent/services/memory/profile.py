@@ -34,18 +34,20 @@ class ProfileStore:
             row = conn.execute("SELECT * FROM scene_profiles WHERE scene = ?", (scene,)).fetchone()
             return SceneProfile.from_row(row) if row else None
 
-    def update_weight(self, scene: str, weight: float) -> None:
+    def update_weight(self, scene: str, weight: float) -> bool:
         with self._db._get_conn() as conn:
-            conn.execute(
+            cursor = conn.execute(
                 "UPDATE scene_profiles SET weight = ?, updated_at = ? WHERE scene = ?",
                 (weight, datetime.now().isoformat(), scene),
             )
             conn.commit()
+            return cursor.rowcount > 0
 
-    def update_keywords(self, scene: str, keywords: list[str]) -> None:
+    def update_keywords(self, scene: str, keywords: list[str]) -> bool:
         with self._db._get_conn() as conn:
-            conn.execute(
+            cursor = conn.execute(
                 "UPDATE scene_profiles SET keywords = ?, updated_at = ? WHERE scene = ?",
                 (json.dumps(keywords, ensure_ascii=False), datetime.now().isoformat(), scene),
             )
             conn.commit()
+            return cursor.rowcount > 0
