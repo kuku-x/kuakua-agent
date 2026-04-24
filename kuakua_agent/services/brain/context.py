@@ -25,7 +25,7 @@ def summarize_praise_history(history: list, max_chars: int = 300) -> str:
     seen_styles: set[str] = set()
     for h in history[:10]:
         style_key = h.content[:10]
-        if style_key in seen_styles and len(seen_styles) >= 2:
+        if style_key in seen_styles:
             continue
         seen_styles.add(style_key)
         parts.append(f"- {h.content[:80]}")
