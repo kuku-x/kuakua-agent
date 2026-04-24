@@ -45,3 +45,35 @@ def test_overnight_time_range():
     assert rule.evaluate_time(datetime(2026, 4, 27, 23, 0)) is True
     assert rule.evaluate_time(datetime(2026, 4, 27, 3, 0)) is True
     assert rule.evaluate_time(datetime(2026, 4, 27, 12, 0)) is False
+
+
+def test_time_moment_first_awake():
+    rule = TriggerRule(
+        name="test",
+        time_conditions=[TimeCondition(type="moment", moment="first_awake")],
+    )
+    # 5-9 AM should match first_awake
+    assert rule.evaluate_time(datetime(2026, 4, 27, 6, 0)) is True
+    assert rule.evaluate_time(datetime(2026, 4, 27, 8, 59)) is True
+    # outside range should not match
+    assert rule.evaluate_time(datetime(2026, 4, 27, 10, 0)) is False
+    assert rule.evaluate_time(datetime(2026, 4, 27, 4, 0)) is False
+
+
+def test_behavior_app_category():
+    rule = TriggerRule(
+        name="test",
+        behavior_conditions=[BehaviorCondition(type="app_category", category="development", min_minutes=30)],
+    )
+    assert rule.evaluate_behavior({"category_minutes": {"development": 45}}) is True
+    assert rule.evaluate_behavior({"category_minutes": {"development": 15}}) is False
+    assert rule.evaluate_behavior({"category_minutes": {"other": 100}}) is False
+
+
+def test_behavior_event_type():
+    rule = TriggerRule(
+        name="test",
+        behavior_conditions=[BehaviorCondition(type="event_type", event_type="focus")],
+    )
+    assert rule.evaluate_behavior({"last_event": "focus"}) is True
+    assert rule.evaluate_behavior({"last_event": "coding"}) is False
