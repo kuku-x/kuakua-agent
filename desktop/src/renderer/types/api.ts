@@ -50,3 +50,34 @@ export interface SettingsResponse {
   doubao_api_key_set: boolean
 }
 
+export interface PraiseConfig {
+  praise_auto_enable: boolean
+  tts_enable: boolean
+  tts_voice: string
+  tts_speed: number
+  do_not_disturb_start: string
+  do_not_disturb_end: string
+  max_praises_per_day: number
+  global_cooldown_minutes: number
+}
+
+export interface MilestoneResponse {
+  id: number
+  event_type: string
+  title: string
+  description: string | null
+  occurred_at: string
+  is_recalled: boolean
+}
+
+export interface ProfileResponse {
+  scene: string
+  weight: number
+  keywords: string[]
+}
+
+export interface FeedbackCreate {
+  praise_id: number
+  reaction: 'liked' | 'disliked' | 'neutral'
+}
+
