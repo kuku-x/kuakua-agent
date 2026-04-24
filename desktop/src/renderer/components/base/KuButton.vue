@@ -1,8 +1,9 @@
 <template>
   <button
-    :class="['ku-button', `ku-button--${variant}`, `ku-button--${size}`, { 'ku-button--disabled': disabled }]"
-    :disabled="disabled"
+    :class="['ku-button', `ku-button--${variant}`, `ku-button--${size}`, { 'ku-button--disabled': disabled || loading }]"
+    :disabled="disabled || loading"
     :type="type"
+    :aria-busy="loading"
   >
     <span v-if="loading" class="ku-button__spinner"></span>
     <slot />
