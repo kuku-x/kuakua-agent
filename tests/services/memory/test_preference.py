@@ -1,0 +1,26 @@
+import pytest
+import tempfile
+import os
+from kuakua_agent.services.memory.database import Database
+from kuakua_agent.services.memory.preference import PreferenceStore
+
+@pytest.fixture
+def temp_db():
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    db = Database(db_path=path)
+    yield db
+    os.unlink(path)
+
+def test_default_prefs_initialized(temp_db):
+    store = PreferenceStore(db=temp_db)
+    assert store.get_bool("praise_auto_enable") is True
+    assert store.get_bool("tts_enable") is False
+    assert store.get_int("max_praises_per_day") == 10
+
+def test_set_and_get(temp_db):
+    store = PreferenceStore(db=temp_db)
+    store.set("test_key", "test_value")
+    assert store.get("test_key") == "test_value"
+    store.set("test_bool", "true")
+    assert store.get_bool("test_bool") is True
