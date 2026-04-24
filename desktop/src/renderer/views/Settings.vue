@@ -220,7 +220,10 @@ onMounted(async () => {
     if (praiseRes.data.status === 'success') {
       praise.value = praiseRes.data.data
     }
-  } catch {}
+  } catch (error: unknown) {
+  // silently ignore - praise settings are optional
+  void error
+}
 })
 
 async function saveSettings() {
