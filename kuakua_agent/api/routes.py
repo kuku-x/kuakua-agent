@@ -58,10 +58,10 @@ async def delete_all_data() -> ApiResponse[dict[str, bool]]:
 
 
 # GET /settings/praise
-@router.get("/settings/praise", response_model=PraiseConfig)
-async def get_praise_config() -> PraiseConfig:
+@router.get("/settings/praise", response_model=ApiResponse[PraiseConfig])
+async def get_praise_config() -> ApiResponse[PraiseConfig]:
     pref = PreferenceStore()
-    return PraiseConfig(
+    return ApiResponse(data=PraiseConfig(
         praise_auto_enable=pref.get_bool("praise_auto_enable"),
         tts_enable=pref.get_bool("tts_enable"),
         tts_voice=pref.get("tts_voice") or "default",
@@ -70,7 +70,7 @@ async def get_praise_config() -> PraiseConfig:
         do_not_disturb_end=pref.get("do_not_disturb_end") or "08:00",
         max_praises_per_day=pref.get_int("max_praises_per_day", 10),
         global_cooldown_minutes=pref.get_int("global_cooldown_minutes", 30),
-    )
+    ))
 
 
 # PUT /settings/praise
@@ -89,11 +89,11 @@ async def update_praise_config(payload: PraiseConfig) -> ApiResponse[PraiseConfi
 
 
 # GET /memory/milestones
-@router.get("/memory/milestones", response_model=list[MilestoneResponse])
-async def get_milestones() -> list[MilestoneResponse]:
+@router.get("/memory/milestones", response_model=ApiResponse[list[MilestoneResponse]])
+async def get_milestones() -> ApiResponse[list[MilestoneResponse]]:
     store = MilestoneStore()
     milestones = store.get_all()
-    return [
+    return ApiResponse(data=[
         MilestoneResponse(
             id=m.id,
             event_type=m.event_type,
@@ -103,7 +103,7 @@ async def get_milestones() -> list[MilestoneResponse]:
             is_recalled=m.is_recalled,
         )
         for m in milestones
-    ]
+    ])
 
 
 # POST /memory/milestones
@@ -124,14 +124,14 @@ async def create_milestone(payload: MilestoneCreate) -> ApiResponse[MilestoneRes
 
 
 # GET /memory/profiles
-@router.get("/memory/profiles", response_model=list[ProfileResponse])
-async def get_profiles() -> list[ProfileResponse]:
+@router.get("/memory/profiles", response_model=ApiResponse[list[ProfileResponse]])
+async def get_profiles() -> ApiResponse[list[ProfileResponse]]:
     store = ProfileStore()
     profiles = store.get_all()
-    return [
+    return ApiResponse(data=[
         ProfileResponse(scene=p.scene, weight=p.weight, keywords=p.keywords)
         for p in profiles
-    ]
+    ])
 
 
 # POST /feedback
