@@ -137,17 +137,21 @@
 
             <div class="settings-page__field">
               <KuInput
-                v-model.number="praise.max_praises_per_day"
-                type="number"
+                :model-value="String(praise.max_praises_per_day)"
+                type="text"
                 label="每日夸夸上限"
+                placeholder="10"
+                @update:model-value="praise.max_praises_per_day = Number($event)"
               />
             </div>
 
             <div class="settings-page__field">
               <KuInput
-                v-model.number="praise.global_cooldown_minutes"
-                type="number"
+                :model-value="String(praise.global_cooldown_minutes)"
+                type="text"
                 label="全局冷却时间（分钟）"
+                placeholder="30"
+                @update:model-value="praise.global_cooldown_minutes = Number($event)"
               />
             </div>
           </div>
@@ -274,7 +278,12 @@ async function savePraiseConfig() {
   praiseLoading.value = true
   praiseSaveMsg.value = ''
   try {
-    const res = await praiseApi.updateConfig(praise.value)
+    const payload = {
+      ...praise.value,
+      max_praises_per_day: Number(praise.value.max_praises_per_day),
+      global_cooldown_minutes: Number(praise.value.global_cooldown_minutes),
+    }
+    const res = await praiseApi.updateConfig(payload)
     if (res.data.status === 'success') {
       praise.value = res.data.data
       praiseSaveSuccess.value = true
