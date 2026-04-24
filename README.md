@@ -66,7 +66,7 @@ kuakua-agent/
 ```bash
 cd kuakua_agent
 pip install -e .
-uvicorn kuakua_agent.main:app --reload --port 8000
+uvicorn kuakua_agent.main:app --reload --port 8001
 ```
 
 ### 桌面应用启动

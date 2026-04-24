@@ -1,8 +1,8 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron/main'
 import { join } from 'path'
 
 let mainWindow: BrowserWindow | null = null
-const DEV_SERVER_URL = 'http://localhost:5173'
+const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL || 'http://localhost:5174'
 
 function createWindow() {
   mainWindow = new BrowserWindow({

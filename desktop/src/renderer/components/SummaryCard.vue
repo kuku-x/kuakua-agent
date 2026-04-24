@@ -1,38 +1,40 @@
 <template>
-  <div class="summary-card">
-    <div class="praise-section">
-      <div class="praise-icon">✨</div>
-      <p class="praise-text">{{ summary.praise_text }}</p>
+  <section class="summary-card">
+    <div class="summary-card__lead">
+      <span class="summary-card__badge">今日夸夸</span>
+      <h3>{{ summary.praise_text }}</h3>
     </div>
 
-    <div class="stats-section">
-      <div class="stat-item">
-        <div class="stat-value">{{ summary.total_hours }}</div>
-        <div class="stat-label">总时长(h)</div>
-      </div>
-      <div class="stat-item work">
-        <div class="stat-value">{{ summary.work_hours }}</div>
-        <div class="stat-label">工作(h)</div>
-      </div>
-      <div class="stat-item entertainment">
-        <div class="stat-value">{{ summary.entertainment_hours }}</div>
-        <div class="stat-label">娱乐(h)</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value">{{ summary.focus_score }}</div>
-        <div class="stat-label">专注分</div>
-      </div>
+    <div class="summary-card__stats">
+      <article class="summary-card__stat">
+        <span>总时长</span>
+        <strong>{{ summary.total_hours }}</strong>
+        <small>活跃小时</small>
+      </article>
+      <article class="summary-card__stat">
+        <span>工作</span>
+        <strong>{{ summary.work_hours }}</strong>
+        <small>专注投入</small>
+      </article>
+      <article class="summary-card__stat">
+        <span>娱乐</span>
+        <strong>{{ summary.entertainment_hours }}</strong>
+        <small>放松恢复</small>
+      </article>
+      <article class="summary-card__stat">
+        <span>专注分</span>
+        <strong>{{ summary.focus_score }}</strong>
+        <small>满分 100</small>
+      </article>
     </div>
 
-    <div class="suggestions-section" v-if="summary.suggestions?.length">
-      <h4>💡 建议</h4>
+    <div v-if="summary.suggestions?.length" class="summary-card__suggestions">
+      <p class="summary-card__suggestions-title">温柔建议</p>
       <ul>
-        <li v-for="(suggestion, index) in summary.suggestions" :key="index">
-          {{ suggestion }}
-        </li>
+        <li v-for="(suggestion, index) in summary.suggestions" :key="index">{{ suggestion }}</li>
       </ul>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -45,78 +47,105 @@ defineProps<{
 
 <style scoped>
 .summary-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  padding: 32px;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  background:
+    radial-gradient(circle at top left, rgba(201, 138, 105, 0.18), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(212, 168, 75, 0.12), transparent 24%),
+    var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
 }
 
-.praise-section {
-  text-align: center;
-  margin-bottom: 32px;
+.summary-card__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  margin-bottom: var(--space-3);
+  padding: 0 var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
 }
 
-.praise-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+.summary-card__lead h3 {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.25;
+  letter-spacing: -0.04em;
 }
 
-.praise-text {
-  font-size: 20px;
-  line-height: 1.6;
-  font-weight: 500;
-}
-
-.stats-section {
+.summary-card__stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
-.stat-item {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 16px;
-  border-radius: 12px;
-  text-align: center;
+.summary-card__stat {
+  display: flex;
+  min-height: 120px;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
 }
 
-.stat-value {
-  font-size: 28px;
-  font-weight: bold;
+.summary-card__stat span,
+.summary-card__stat small,
+.summary-card__suggestions-title {
+  color: var(--color-text-secondary);
 }
 
-.stat-label {
-  font-size: 12px;
-  opacity: 0.9;
-  margin-top: 4px;
+.summary-card__stat strong {
+  font-size: var(--font-size-4xl);
+  letter-spacing: -0.04em;
 }
 
-.suggestions-section {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 20px;
-  border-radius: 12px;
+.summary-card__suggestions {
+  padding: var(--space-5);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
 }
 
-.suggestions-section h4 {
-  margin-bottom: 12px;
-  font-size: 14px;
+.summary-card__suggestions-title {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.suggestions-section ul {
-  list-style: none;
-  padding: 0;
+.summary-card__suggestions ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.suggestions-section li {
-  padding: 8px 0;
-  font-size: 14px;
-  opacity: 0.95;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.summary-card__suggestions li {
+  padding-top: var(--space-3);
+  line-height: var(--line-height-relaxed);
+  border-top: 1px solid var(--color-border);
 }
 
-.suggestions-section li:last-child {
-  border-bottom: none;
+.summary-card__suggestions li:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+@media (max-width: 720px) {
+  .summary-card {
+    padding: var(--space-6);
+  }
+
+  .summary-card__stats {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -45,8 +45,9 @@ class BehaviorDetector:
 
     def detect_and_record(self) -> list[BehaviorEvent]:
         """检测当前行为状态，有显著事件则记录 milestone"""
-        now = datetime.now(timezone.utc)
-        since = self._last_check or (now - timedelta(minutes=5))
+        now = datetime.now(timezone.utc)  # UTC，与 ActivityWatch 保持一致
+        # 首次运行取最近30分钟窗口，避免窗口太小
+        since = self._last_check or (now - timedelta(minutes=30))
         self._last_check = now
 
         buckets = self._client.get_main_buckets()
@@ -179,8 +180,8 @@ class BehaviorDetector:
         return int(duration)
 
     def _is_unusual_hour(self) -> bool:
-        """检查当前是否为非寻常工作时段"""
-        hour = datetime.now().hour
+        """检查当前是否为非寻常工作时段（UTC）"""
+        hour = datetime.now(timezone.utc).hour
         # 早 6 点前或晚 23 点后为非寻常时段
         return hour < 6 or hour > 22
 
@@ -191,7 +192,8 @@ class BehaviorDetector:
                 event_type=m.event_type,
                 title=m.title,
                 description=m.description or "",
-                occurred_at=m.occurred_at,
+                # 数据库存储的是 UTC naive，转为 UTC aware 以便与 now (UTC aware) 比较
+                occurred_at=m.occurred_at.replace(tzinfo=timezone.utc),
             )
             for m in milestones
         ]

@@ -1,6 +1,9 @@
 <template>
   <div v-if="appStore.globalError" class="global-error" role="alert">
-    <span>{{ appStore.globalError }}</span>
+    <div class="global-error__copy">
+      <strong>出了点小问题</strong>
+      <span>{{ appStore.globalError }}</span>
+    </div>
     <button type="button" @click="appStore.clearGlobalError">关闭</button>
   </div>
 </template>
@@ -14,31 +17,53 @@ const appStore = useAppStore()
 <style scoped>
 .global-error {
   position: fixed;
-  top: 16px;
+  top: var(--space-4);
   left: 50%;
   z-index: 1000;
   display: flex;
-  max-width: min(560px, calc(100vw - 32px));
-  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  color: #7a1f1f;
-  background: #fff2f0;
-  border: 1px solid #ffccc7;
-  border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  gap: var(--space-4);
+  min-width: min(560px, calc(100vw - 32px));
+  max-width: min(720px, calc(100vw - 32px));
+  padding: var(--space-4);
+  color: var(--color-danger);
+  background: rgba(255, 253, 251, 0.96);
+  border: 1px solid rgba(192, 96, 80, 0.18);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   transform: translateX(-50%);
+  backdrop-filter: blur(10px);
+}
+
+.global-error__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.global-error__copy strong {
+  color: var(--color-text-primary);
+}
+
+.global-error__copy span {
+  line-height: var(--line-height-normal);
 }
 
 .global-error button {
-  flex: 0 0 auto;
-  padding: 4px 10px;
-  color: #7a1f1f;
-  cursor: pointer;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  color: var(--color-text-primary);
   background: transparent;
-  border: 1px solid #ffaaa5;
-  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .global-error {
+    min-width: calc(100vw - 24px);
+    padding: var(--space-3);
+  }
 }
 </style>
-

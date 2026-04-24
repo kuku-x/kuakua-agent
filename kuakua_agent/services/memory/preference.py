@@ -9,6 +9,8 @@ class PreferenceStore:
         "tts_enable": "false",
         "tts_voice": "default",
         "tts_speed": "1.0",
+        "fish_audio_model": "s2-pro",
+        "openweather_location": "Shanghai,CN",
         "do_not_disturb_start": "22:00",
         "do_not_disturb_end": "08:00",
         "max_praises_per_day": "10",

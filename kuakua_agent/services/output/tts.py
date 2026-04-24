@@ -4,12 +4,15 @@ import httpx
 import sys
 import tempfile
 from pathlib import Path
+
+from kuakua_agent.config import settings
 from kuakua_agent.services.output.base import OutputChannel, OutputResult
 from kuakua_agent.services.memory import PreferenceStore
 
 
 class FishTTS(OutputChannel):
     DEFAULT_API_URL = "https://api.fish.audio/v1/tts"
+    DEFAULT_MODEL = "s2-pro"
 
     def __init__(self, pref_store=None):
         self._pref = pref_store or PreferenceStore()
@@ -23,45 +26,74 @@ class FishTTS(OutputChannel):
         if not self._pref.get_bool("tts_enable"):
             return OutputResult(success=False, channel="tts", content=content, error="TTS未开启")
 
-        api_url = (metadata or {}).get("api_url", self.DEFAULT_API_URL)
-        voice_id = self._pref.get("tts_voice") or "default"
-        speed = self._pref.get_float("tts_speed", 1.0)
+        api_key = self._pref.get("fish_audio_api_key") or getattr(settings, "fish_audio_api_key", "")
+        if not api_key:
+            return OutputResult(success=False, channel="tts", content=content, error="Fish Audio API Key 未配置")
 
-        cache_key = hashlib.md5(f"{content}:{voice_id}:{speed}".encode()).hexdigest()
-        cached = self._cache_dir / f"{cache_key}.mp3"
+        voice_id = self._pref.get("tts_voice") or ""
+        if not voice_id or voice_id == "default":
+            return OutputResult(success=False, channel="tts", content=content, error="Fish Audio Voice ID 未配置")
+
+        api_url = (metadata or {}).get("api_url", self.DEFAULT_API_URL)
+        speed = self._pref.get_float("tts_speed", 1.0)
+        model = self._pref.get("fish_audio_model") or self.DEFAULT_MODEL
+
+        cache_key = hashlib.md5(f"{content}:{voice_id}:{speed}:{model}".encode()).hexdigest()
+        cached = self._cache_dir / f"{cache_key}.wav"
 
         try:
-            if cached.exists():
-                await self._play_audio(str(cached))
-            else:
-                audio_data = await self._fetch_tts(content, api_url, voice_id, speed)
+            if not cached.exists():
+                audio_data = await self._fetch_tts(
+                    text=content,
+                    api_url=api_url,
+                    api_key=api_key,
+                    voice_id=voice_id,
+                    speed=speed,
+                    model=model,
+                )
                 try:
                     cached.write_bytes(audio_data)
                 except OSError:
-                    pass  # disk full, continue without caching
-                await self._play_audio(str(cached))
+                    pass
+
+            await self._play_audio(str(cached))
             return OutputResult(success=True, channel="tts", content=content)
         except Exception as e:
-            # 静默兜底：TTS异常降级为纯通知，不向主流程抛异常
-            return OutputResult(success=False, channel="tts", content=content, error=f"TTS静默失败: {e}")
+            return OutputResult(success=False, channel="tts", content=content, error=f"Fish Audio 播放失败: {e}")
 
-    async def _fetch_tts(self, text: str, api_url: str, voice_id: str, speed: float) -> bytes:
+    async def _fetch_tts(
+        self,
+        *,
+        text: str,
+        api_url: str,
+        api_key: str,
+        voice_id: str,
+        speed: float,
+        model: str,
+    ) -> bytes:
         payload = {
-            "model": voice_id,
             "text": text,
+            "reference_id": voice_id,
+            "format": "wav",
+            "latency": "normal",
             "speed": speed,
         }
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "model": model,
+        }
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(api_url, json=payload, headers=headers)
         if response.status_code != 200:
-            raise Exception(f"Fish Audio API失败: {response.status_code}")
+            raise Exception(f"Fish Audio API 失败: {response.status_code} - {response.text[:200]}")
         return response.content
 
     async def _play_audio(self, filepath: str) -> None:
         if sys.platform == "win32":
             proc = await asyncio.create_subprocess_exec(
-                "powershell", "-Command",
+                "powershell",
+                "-Command",
                 f'(New-Object System.Media.SoundPlayer "{filepath}").PlaySync()',
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -69,14 +101,16 @@ class FishTTS(OutputChannel):
             await proc.communicate()
         elif sys.platform == "darwin":
             proc = await asyncio.create_subprocess_exec(
-                "afplay", filepath,
+                "afplay",
+                filepath,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             await proc.communicate()
         else:
             proc = await asyncio.create_subprocess_exec(
-                "mpg123", filepath,
+                "mpg123",
+                filepath,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )

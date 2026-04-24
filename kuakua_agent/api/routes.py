@@ -1,25 +1,70 @@
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from kuakua_agent.schemas.chat import ChatRequest, ChatResponse
 from kuakua_agent.schemas.common import ApiResponse
+from kuakua_agent.schemas.integration import IntegrationHealthResponse, IntegrationSummaryResponse
 from kuakua_agent.schemas.praise import PraiseConfig, MilestoneCreate, MilestoneResponse, ProfileResponse, FeedbackCreate
-from kuakua_agent.schemas.settings import SettingsPayload, SettingsResponse
+from kuakua_agent.schemas.settings import (
+    ActivityWatchCheckPayload,
+    ActivityWatchStatusResponse,
+    SettingsPayload,
+    SettingsResponse,
+)
 from kuakua_agent.schemas.summary import SummaryResponse
+from kuakua_agent.services.activitywatch import ActivityWatchClient
 from kuakua_agent.services.chat_service import ChatService
+from kuakua_agent.services.integrations import get_integration_registry
 from kuakua_agent.services.memory import MilestoneStore, PraiseHistoryStore, PreferenceStore, ProfileStore, FeedbackStore
-from kuakua_agent.services.settings_service import SettingsService
+from kuakua_agent.services.settings_service import get_settings_service
 from kuakua_agent.services.summary_service import SummaryService
 
 router = APIRouter()
 summary_service = SummaryService()
 chat_service = ChatService()
-settings_service = SettingsService()
+settings_service = get_settings_service()
+integration_registry = get_integration_registry()
 
 
 @router.get("/health", response_model=ApiResponse[dict[str, str]])
 async def health_check() -> ApiResponse[dict[str, str]]:
     return ApiResponse(data={"status": "ok"})
+
+
+@router.get("/integrations", response_model=ApiResponse[IntegrationSummaryResponse])
+async def list_integrations() -> ApiResponse[IntegrationSummaryResponse]:
+    items = [
+        IntegrationHealthResponse(
+            name=health.name,
+            display_name=health.display_name,
+            enabled=health.enabled,
+            configured=health.configured,
+            healthy=health.healthy,
+            capabilities=health.capabilities,
+            message=health.message,
+        )
+        for health in (provider.health_check() for provider in integration_registry.list_all())
+    ]
+    return ApiResponse(data=IntegrationSummaryResponse(items=items))
+
+
+@router.get("/integrations/{name}/health", response_model=ApiResponse[IntegrationHealthResponse])
+async def integration_health(name: str) -> ApiResponse[IntegrationHealthResponse]:
+    provider = integration_registry.get(name)
+    if provider is None:
+        raise HTTPException(status_code=404, detail=f"Integration not found: {name}")
+    health = provider.health_check()
+    return ApiResponse(
+        data=IntegrationHealthResponse(
+            name=health.name,
+            display_name=health.display_name,
+            enabled=health.enabled,
+            configured=health.configured,
+            healthy=health.healthy,
+            capabilities=health.capabilities,
+            message=health.message,
+        )
+    )
 
 
 @router.get("/summary/today", response_model=ApiResponse[SummaryResponse])
@@ -41,6 +86,30 @@ async def send_chat(request: ChatRequest) -> ApiResponse[ChatResponse]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def chat_stream_generator(request: ChatRequest):
+    """SSE 事件生成器"""
+    try:
+        async for chunk in chat_service.reply_stream(request):
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
+    except Exception as e:
+        yield f"data: [ERROR] {str(e)}\n\n"
+
+
+@router.post("/chat/stream")
+async def send_chat_stream(request: ChatRequest):
+    """流式聊天接口，返回 SSE"""
+    return StreamingResponse(
+        chat_stream_generator(request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.get("/settings", response_model=SettingsResponse)
 async def get_settings() -> SettingsResponse:
     return settings_service.get_settings()
@@ -49,6 +118,46 @@ async def get_settings() -> SettingsResponse:
 @router.put("/settings", response_model=ApiResponse[SettingsResponse])
 async def update_settings(payload: SettingsPayload) -> ApiResponse[SettingsResponse]:
     return ApiResponse(data=settings_service.update_settings(payload))
+
+
+@router.get("/settings/activitywatch/status", response_model=ApiResponse[ActivityWatchStatusResponse])
+async def get_activitywatch_status() -> ApiResponse[ActivityWatchStatusResponse]:
+    aw_server_url = settings_service.get_settings().aw_server_url
+    client = ActivityWatchClient(base_url=aw_server_url)
+    buckets = client.get_buckets()
+    connected = bool(buckets)
+    return ApiResponse(
+        data=ActivityWatchStatusResponse(
+            aw_server_url=aw_server_url,
+            connected=connected,
+            bucket_count=len(buckets),
+            message=(
+                f"已连接到 ActivityWatch，检测到 {len(buckets)} 个 buckets。"
+                if connected
+                else "无法连接到当前配置的 ActivityWatch 地址。"
+            ),
+        )
+    )
+
+
+@router.post("/settings/activitywatch/check", response_model=ApiResponse[ActivityWatchStatusResponse])
+async def check_activitywatch(payload: ActivityWatchCheckPayload) -> ApiResponse[ActivityWatchStatusResponse]:
+    aw_server_url = str(payload.aw_server_url).rstrip("/")
+    client = ActivityWatchClient(base_url=aw_server_url)
+    buckets = client.get_buckets()
+    connected = bool(buckets)
+    return ApiResponse(
+        data=ActivityWatchStatusResponse(
+            aw_server_url=aw_server_url,
+            connected=connected,
+            bucket_count=len(buckets),
+            message=(
+                f"连接成功，检测到 {len(buckets)} 个 buckets。"
+                if connected
+                else "连接失败，请确认 ActivityWatch 已启动且地址填写正确。"
+            ),
+        )
+    )
 
 
 @router.delete("/settings/data", response_model=ApiResponse[dict[str, bool]])

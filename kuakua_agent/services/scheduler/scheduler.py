@@ -7,6 +7,7 @@ from kuakua_agent.services.scheduler.cooldown import CooldownManager
 from kuakua_agent.services.brain import ContextBuilder, ModelAdapter
 from kuakua_agent.services.memory import MilestoneStore, PraiseHistoryStore
 from kuakua_agent.services.output import OutputManager, SystemNotifier, FishTTS
+from kuakua_agent.services.weather import WeatherService
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class PraiseScheduler:
         self._output_mgr.register(FishTTS())
         self._context_builder = ContextBuilder()
         self._model = ModelAdapter()
+        self._weather = WeatherService()
 
     async def start(self) -> None:
         if self._running:
@@ -54,6 +56,7 @@ class PraiseScheduler:
         messages, _ = self._context_builder.build_proactive_context(
             trigger_type=event.trigger_type.value,
             env_context=str(event.data or {}),
+            weather=self._weather.get_weather_summary(),
         )
 
         try:

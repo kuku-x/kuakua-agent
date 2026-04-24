@@ -1,6 +1,13 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from kuakua_agent.services.memory.database import Database
 from kuakua_agent.services.memory.models import Milestone
+
+
+def _to_utc_naive(dt: datetime) -> datetime:
+    """将任意 datetime 转为 UTC naive datetime"""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 class MilestoneStore:
@@ -8,7 +15,7 @@ class MilestoneStore:
         self._db = db or Database()
 
     def add(self, event_type: str, title: str, description: str | None = None, occurred_at: datetime | None = None) -> Milestone:
-        occurred = occurred_at or datetime.now()
+        occurred = _to_utc_naive(occurred_at) if occurred_at else datetime.utcnow()
         with self._db._get_conn() as conn:
             cursor = conn.execute(
                 "INSERT INTO milestones (event_type, title, description, occurred_at) VALUES (?, ?, ?, ?)",

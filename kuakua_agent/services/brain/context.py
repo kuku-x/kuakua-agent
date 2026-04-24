@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime
+
 from kuakua_agent.services.memory import (
     MilestoneStore,
     PraiseHistoryStore,
@@ -6,21 +7,21 @@ from kuakua_agent.services.memory import (
     ProfileStore,
 )
 from kuakua_agent.services.brain.prompt import PraisePromptManager
+from kuakua_agent.services.weather import WeatherService
 
 
 def get_time_of_day() -> str:
     hour = datetime.now().hour
     if 5 <= hour < 9:
         return "早间"
-    elif 9 <= hour < 18:
+    if 9 <= hour < 18:
         return "日间"
-    else:
-        return "晚间"
+    return "晚间"
 
 
 def summarize_praise_history(history: list, max_chars: int = 300) -> str:
     if not history:
-        return "暂无夸夸历史"
+        return "暂无最近夸夸记录"
     parts = []
     seen_styles: set[str] = set()
     for h in history[:10]:
@@ -36,6 +37,7 @@ def summarize_praise_history(history: list, max_chars: int = 300) -> str:
 
 
 def deduplicate_milestones(milestones: list, within_hours: int = 1) -> list:
+    del within_hours
     seen: dict = {}
     for m in milestones:
         key = (m.event_type, m.occurred_at.replace(minute=0, second=0, microsecond=0))
@@ -51,11 +53,13 @@ class ContextBuilder:
         history_store=None,
         pref_store=None,
         profile_store=None,
+        weather_service=None,
     ):
         self._ms = milestone_store or MilestoneStore()
         self._hs = history_store or PraiseHistoryStore()
         self._pref = pref_store or PreferenceStore()
         self._profile = profile_store or ProfileStore()
+        self._weather = weather_service or WeatherService(self._pref)
         self._prompt_mgr = PraisePromptManager()
 
     def build_user_context(
@@ -63,27 +67,32 @@ class ContextBuilder:
         user_message: str,
         weather: str = "未知",
     ) -> tuple[list[dict], str]:
+        if weather == "未知":
+            weather = self._weather.get_weather_summary()
+
         time_of_day = get_time_of_day()
         recent = self._ms.get_recent(hours=72, limit=10)
         recent = deduplicate_milestones(recent)
         recent_str = (
-            "\n".join(
-                f"- [{m.event_type}] {m.title}: {m.description or ''}"
-                for m in recent
-            )
-            or "暂无近期里程碑"
+            "\n".join(f"- [{m.event_type}] {m.title}: {m.description or ''}" for m in recent)
+            or "暂无近期行为里程碑"
         )
         history = self._hs.get_recent(limit=20)
         history_summary = summarize_praise_history(history)
         profiles = self._profile.get_all()
-        top_scene = profiles[0].scene if profiles else "一般"
+        top_scene = profiles[0].scene if profiles else "通用陪伴"
         scene_context = f"主要场景: {top_scene}"
+        recent_highlight = self._build_recent_highlight(recent)
+        reply_directive = self._build_reply_directive(user_message, recent_highlight)
+
         user_prompt_text = self._prompt_mgr.build_user_prompt(
             user_message=user_message,
             time_of_day=time_of_day,
             scene_context=scene_context,
             recent_milestones=recent_str,
             praise_history_summary=history_summary,
+            recent_highlight=recent_highlight,
+            reply_directive=reply_directive,
             weather=weather,
         )
         messages = [
@@ -98,20 +107,22 @@ class ContextBuilder:
         env_context: str = "",
         weather: str = "未知",
     ) -> tuple[list[dict], str]:
+        if weather == "未知":
+            weather = self._weather.get_weather_summary()
+
         time_of_day = get_time_of_day()
         unrecalled = self._ms.get_unrecalled(hours=72, limit=5)
         unrecalled_str = (
-            "\n".join(
-                f"- [{m.event_type}] {m.title}: {m.description or ''}"
-                for m in unrecalled
-            )
-            or "暂无新鲜里程碑"
+            "\n".join(f"- [{m.event_type}] {m.title}: {m.description or ''}" for m in unrecalled)
+            or "暂无新鲜行为里程碑"
         )
         history = self._hs.get_recent(limit=20)
         history_summary = summarize_praise_history(history)
         profiles = self._profile.get_all()
-        top_scene = profiles[0].scene if profiles else "一般"
+        top_scene = profiles[0].scene if profiles else "通用陪伴"
         scene_context = f"主要场景: {top_scene}"
+        recent_highlight = self._build_recent_highlight(unrecalled or self._ms.get_recent(hours=72, limit=10))
+
         user_prompt_text = self._prompt_mgr.build_proactive_prompt(
             trigger_type=trigger_type,
             time_of_day=time_of_day,
@@ -119,6 +130,7 @@ class ContextBuilder:
             unrecalled_milestones=unrecalled_str,
             praise_history_summary=history_summary,
             env_context=env_context,
+            recent_highlight=recent_highlight,
             weather=weather,
         )
         messages = [
@@ -126,3 +138,39 @@ class ContextBuilder:
             {"role": "user", "content": user_prompt_text},
         ]
         return messages, user_prompt_text
+
+    def _build_recent_highlight(self, milestones: list) -> str:
+        if not milestones:
+            return "最近也在稳稳推进自己的事情。"
+
+        latest = milestones[0]
+        description = latest.description or latest.title
+        event_type = latest.event_type
+
+        if event_type == "coding":
+            return f"最近你有明显的编码投入，比如：{description}"
+        if event_type == "focus":
+            return f"最近你有一段很扎实的专注表现，比如：{description}"
+        if event_type == "discipline":
+            return f"最近你在自律推进上很亮眼，比如：{description}"
+        return f"最近你有一个值得被夸的行为亮点：{description}"
+
+    def _build_reply_directive(self, user_message: str, recent_highlight: str) -> str:
+        normalized = user_message.strip().lower().replace("？", "?")
+        identity_phrases = [
+            "你是谁",
+            "你叫什么",
+            "你是干嘛的",
+            "你是谁?",
+            "who are you",
+        ]
+        if any(phrase in normalized for phrase in identity_phrases):
+            return (
+                "这次用户是在问你的身份。请用“我是你的专属夸夸呀😊！”开头，"
+                f"并结合这条最近行为亮点做自我介绍：{recent_highlight}。"
+                "语气要软萌真诚，结尾要补一句鼓励。"
+            )
+        return (
+            "请优先结合最近行为亮点来夸，回复要元气、软萌、具体，"
+            "并在结尾补一句鼓励，让用户更有动力继续保持。"
+        )

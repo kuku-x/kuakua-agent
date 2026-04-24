@@ -1,5 +1,5 @@
 // API配置
-export const API_BASE_URL = 'http://localhost:8000/api'
+export const API_BASE_URL = 'http://localhost:8001/api'
 
 // 错误消息
 export const ERROR_MESSAGES = {

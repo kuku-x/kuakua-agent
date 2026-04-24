@@ -2,14 +2,18 @@
 name = "kuakua-agent-backend"
 version = "0.1.0"
 description = "Backend API scaffold for Kuakua Agent"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
   "fastapi>=0.110,<1.0",
   "uvicorn[standard]>=0.27,<1.0",
   "pydantic-settings>=2.2,<3.0",
+  "httpx>=0.27,<1.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kuakua_agent*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
-
+target-version = "py310"

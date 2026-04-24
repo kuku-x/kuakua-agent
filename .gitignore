@@ -5,7 +5,10 @@ release/
 .venv/
 __pycache__/
 *.pyc
+
+# Environment files (API keys)
 .env
+desktop/.env
 
 # Desktop app build outputs
 desktop/out/

@@ -72,6 +72,9 @@ export function normalizeSettings(value: unknown): SettingsResponse {
     aw_server_url: asString(item.aw_server_url, 'http://127.0.0.1:5600'),
     data_masking: Boolean(item.data_masking),
     doubao_api_key_set: Boolean(item.doubao_api_key_set),
+    openweather_api_key_set: Boolean(item.openweather_api_key_set),
+    openweather_location: asString(item.openweather_location, 'Shanghai,CN'),
+    fish_audio_api_key_set: Boolean(item.fish_audio_api_key_set),
+    fish_audio_model: asString(item.fish_audio_model, 's2-pro'),
   }
 }
-

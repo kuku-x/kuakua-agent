@@ -42,12 +42,27 @@ export interface SettingsPayload {
   aw_server_url: string
   data_masking: boolean
   doubao_api_key?: string
+  openweather_api_key?: string
+  openweather_location: string
+  fish_audio_api_key?: string
+  fish_audio_model: string
 }
 
 export interface SettingsResponse {
   aw_server_url: string
   data_masking: boolean
   doubao_api_key_set: boolean
+  openweather_api_key_set: boolean
+  openweather_location: string
+  fish_audio_api_key_set: boolean
+  fish_audio_model: string
+}
+
+export interface ActivityWatchStatus {
+  aw_server_url: string
+  connected: boolean
+  bucket_count: number
+  message: string
 }
 
 export interface PraiseConfig {
@@ -80,4 +95,3 @@ export interface FeedbackCreate {
   praise_id: number
   reaction: 'liked' | 'disliked' | 'neutral'
 }
-
