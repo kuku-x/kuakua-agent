@@ -17,7 +17,12 @@ desktop/release/
 
 # Dependencies (external)
 deps/activitywatch/
+deps/activitywatch-master/
 
 # Python
 *.egg-info/
 .eggs/
+
+# Local app data and tool configs
+kuakua_agent.db
+.claude/
