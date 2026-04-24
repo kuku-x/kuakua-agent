@@ -35,7 +35,10 @@ class FishTTS(OutputChannel):
                 await self._play_audio(str(cached))
             else:
                 audio_data = await self._fetch_tts(content, api_url, voice_id, speed)
-                cached.write_bytes(audio_data)
+                try:
+                    cached.write_bytes(audio_data)
+                except OSError:
+                    pass  # disk full, continue without caching
                 await self._play_audio(str(cached))
             return OutputResult(success=True, channel="tts", content=content)
         except Exception as e:

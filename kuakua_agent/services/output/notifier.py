@@ -21,9 +21,14 @@ class SystemNotifier(OutputChannel):
             return OutputResult(success=False, channel="notifier", content=content, error=str(e))
 
     async def _win_notify(self, title: str, content: str) -> None:
-        escaped_content = content.replace('"', '\\"').replace('\n', ' ')
-        escaped_title = title.replace('"', '\\"')
-        script = f'[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; $template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); $textNodes = $template.GetElementsByTagName("text"); $textNodes.Item(0).AppendChild($template.CreateTextNode("{escaped_title}")) | Out-Null; $textNodes.Item(1).AppendChild($template.CreateTextNode("{escaped_content}")) | Out-Null; $toast = [Windows.UI.Notifications.ToastNotification]::new($template); [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("kuakua-agent").Show($toast)'
+        import re
+        def ps_escape(s: str) -> str:
+            s = s.replace('"', '`"').replace("'", "''")
+            s = re.sub(r'[$`\r\n]', lambda m: '`' + m.group(0), s)
+            return s
+        title_esc = ps_escape(title)
+        content_esc = ps_escape(content)
+        script = f'[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; $template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); $textNodes = $template.GetElementsByTagName("text"); $textNodes.Item(0).AppendChild($template.CreateTextNode("{title_esc}")) | Out-Null; $textNodes.Item(1).AppendChild($template.CreateTextNode("{content_esc}")) | Out-Null; $toast = [Windows.UI.Notifications.ToastNotification]::new($template); [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("kuakua-agent").Show($toast)'
         proc = await asyncio.create_subprocess_exec(
             "powershell", "-Command", script,
             stdout=asyncio.subprocess.PIPE,
@@ -32,8 +37,12 @@ class SystemNotifier(OutputChannel):
         await proc.communicate()
 
     async def _mac_notify(self, title: str, content: str) -> None:
+        import shlex
+        title_esc = shlex.quote(title)
+        content_esc = shlex.quote(content)
+        script = f'display notification {content_esc} with title {title_esc}'
         proc = await asyncio.create_subprocess_exec(
-            "osascript", "-e", f'display notification "{content}" with title "{title}"',
+            "osascript", "-e", script,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
