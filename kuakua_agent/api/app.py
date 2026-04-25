@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from kuakua_agent.api.errors import register_exception_handlers
 from kuakua_agent.api.routes import router
+from kuakua_agent.api.phone_routes import router as phone_router
 
 
 def create_app() -> FastAPI:
@@ -22,4 +23,5 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app)
     app.include_router(router, prefix="/api")
+    app.include_router(phone_router, prefix="/api")
     return app

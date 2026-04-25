@@ -1,0 +1,482 @@
+[
+  {
+    "date": "2026-04-25",
+    "app_name": "com.quark.browser",
+    "package_name": "com.quark.browser",
+    "duration_seconds": 712,
+    "last_used": "2026-04-25 07:19:02+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.hpbr.bosszhipin",
+    "package_name": "com.hpbr.bosszhipin",
+    "duration_seconds": 33,
+    "last_used": "2026-04-25 10:53:35+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "org.telegram.messenger",
+    "package_name": "org.telegram.messenger",
+    "duration_seconds": 311,
+    "last_used": "2026-04-25 10:25:39+00:00",
+    "event_count": 13
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "小米账号",
+    "package_name": "com.xiaomi.account",
+    "duration_seconds": 134,
+    "last_used": "2026-04-25 02:25:44+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "美团",
+    "package_name": "com.sankuai.meituan",
+    "duration_seconds": 74,
+    "last_used": "2026-04-24 04:37:51+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "应用包管理组件",
+    "package_name": "com.miui.packageinstaller",
+    "duration_seconds": 32,
+    "last_used": "2026-04-25 01:22:55+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "系统更新",
+    "package_name": "com.android.updater",
+    "duration_seconds": 36,
+    "last_used": "2026-04-25 04:48:08+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.miui.gallery",
+    "package_name": "com.miui.gallery",
+    "duration_seconds": 603,
+    "last_used": "2026-04-25 05:31:36+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "下载管理程序",
+    "package_name": "com.android.providers.downloads",
+    "duration_seconds": 10,
+    "last_used": "2026-04-25 02:25:53+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "米币支付",
+    "package_name": "com.xiaomi.payment",
+    "duration_seconds": 233,
+    "last_used": "2026-04-24 19:35:16+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "安全服务",
+    "package_name": "com.miui.securitycenter",
+    "duration_seconds": 274,
+    "last_used": "2026-04-25 10:54:30+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "浏览器",
+    "package_name": "com.android.browser",
+    "duration_seconds": 430,
+    "last_used": "2026-04-25 07:14:01+00:00",
+    "event_count": 23
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.miui.password",
+    "package_name": "com.miui.password",
+    "duration_seconds": 0,
+    "last_used": "2026-04-25 03:51:11+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "Google Play 商店",
+    "package_name": "com.android.vending",
+    "duration_seconds": 5,
+    "last_used": "2026-04-24 16:54:11+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.xingin.xhs",
+    "package_name": "com.xingin.xhs",
+    "duration_seconds": 480,
+    "last_used": "2026-04-25 01:37:19+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.tencent.mm",
+    "package_name": "com.tencent.mm",
+    "duration_seconds": 1923,
+    "last_used": "2026-04-25 11:04:14+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "net.activitywatch.android",
+    "package_name": "net.activitywatch.android",
+    "duration_seconds": 480,
+    "last_used": "2026-04-25 01:20:44+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.miui.findmy",
+    "package_name": "com.miui.findmy",
+    "duration_seconds": 0,
+    "last_used": "2026-04-24 16:54:13+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.android.mms",
+    "package_name": "com.android.mms",
+    "duration_seconds": 14,
+    "last_used": "2026-04-24 19:41:42+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.android.calendar",
+    "package_name": "com.android.calendar",
+    "duration_seconds": 3,
+    "last_used": "2026-04-24 12:04:08+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "智能助理",
+    "package_name": "com.miui.personalassistant",
+    "duration_seconds": 28,
+    "last_used": "2026-04-25 01:54:35+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.android.incallui",
+    "package_name": "com.android.incallui",
+    "duration_seconds": 33,
+    "last_used": "2026-04-24 04:08:23+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.xunmeng.pinduoduo",
+    "package_name": "com.xunmeng.pinduoduo",
+    "duration_seconds": 5,
+    "last_used": "2026-04-25 00:18:11+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "相机",
+    "package_name": "com.android.camera",
+    "duration_seconds": 2140,
+    "last_used": "2026-04-25 04:58:57+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "小米澎湃AI引擎",
+    "package_name": "com.xiaomi.aicr",
+    "duration_seconds": 0,
+    "last_used": "2026-04-25 07:13:22+00:00",
+    "event_count": 23
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.ss.android.ugc.aweme",
+    "package_name": "com.ss.android.ugc.aweme",
+    "duration_seconds": 24089,
+    "last_used": "2026-04-25 10:21:16+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.tencent.mobileqq",
+    "package_name": "com.tencent.mobileqq",
+    "duration_seconds": 1821,
+    "last_used": "2026-04-25 11:04:08+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "查找",
+    "package_name": "com.xiaomi.finddevice",
+    "duration_seconds": 1,
+    "last_used": "2026-04-24 16:54:14+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "IntentResolver",
+    "package_name": "com.android.intentresolver",
+    "duration_seconds": 13,
+    "last_used": "2026-04-25 02:26:08+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "笔记",
+    "package_name": "com.miui.notes",
+    "duration_seconds": 27,
+    "last_used": "2026-04-25 10:54:06+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "应用商店",
+    "package_name": "com.xiaomi.market",
+    "duration_seconds": 130,
+    "last_used": "2026-04-25 10:53:45+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "小米设置",
+    "package_name": "com.xiaomi.misettings",
+    "duration_seconds": 49,
+    "last_used": "2026-04-24 23:41:37+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.sohu.inputmethod.sogou.xiaomi",
+    "package_name": "com.sohu.inputmethod.sogou.xiaomi",
+    "duration_seconds": 2,
+    "last_used": "2026-04-25 01:54:56+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.dragon.read",
+    "package_name": "com.dragon.read",
+    "duration_seconds": 4282,
+    "last_used": "2026-04-25 11:17:50+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "Bluetooth Extension",
+    "package_name": "com.xiaomi.bluetooth",
+    "duration_seconds": 7,
+    "last_used": "2026-04-25 09:19:20+00:00",
+    "event_count": 15
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.larus.nova",
+    "package_name": "com.larus.nova",
+    "duration_seconds": 702,
+    "last_used": "2026-04-25 07:08:57+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "垃圾清理",
+    "package_name": "com.miui.cleanmaster",
+    "duration_seconds": 117,
+    "last_used": "2026-04-24 23:52:20+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "设置",
+    "package_name": "com.android.settings",
+    "duration_seconds": 499,
+    "last_used": "2026-04-25 10:19:53+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.miui.weather2",
+    "package_name": "com.miui.weather2",
+    "duration_seconds": 135,
+    "last_used": "2026-04-24 16:29:01+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.autonavi.minimap",
+    "package_name": "com.autonavi.minimap",
+    "duration_seconds": 72,
+    "last_used": "2026-04-25 09:32:51+00:00",
+    "event_count": 15
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.taobao.idlefish",
+    "package_name": "com.taobao.idlefish",
+    "duration_seconds": 168,
+    "last_used": "2026-04-25 05:53:48+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.miui.mediaeditor",
+    "package_name": "com.miui.mediaeditor",
+    "duration_seconds": 10,
+    "last_used": "2026-04-24 06:51:31+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "截屏",
+    "package_name": "com.miui.screenshot",
+    "duration_seconds": 9,
+    "last_used": "2026-04-25 01:19:31+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.follow.clash",
+    "package_name": "com.follow.clash",
+    "duration_seconds": 18,
+    "last_used": "2026-04-25 10:20:10+00:00",
+    "event_count": 13
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "主题壁纸",
+    "package_name": "com.android.thememanager",
+    "duration_seconds": 0,
+    "last_used": "2026-04-24 19:31:10+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "密码管理",
+    "package_name": "com.miui.passwords",
+    "duration_seconds": 4,
+    "last_used": "2026-04-25 03:51:23+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "tv.danmaku.bili",
+    "package_name": "tv.danmaku.bili",
+    "duration_seconds": 12372,
+    "last_used": "2026-04-25 11:04:37+00:00",
+    "event_count": 22
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.eg.android.AlipayGphone",
+    "package_name": "com.eg.android.AlipayGphone",
+    "duration_seconds": 106,
+    "last_used": "2026-04-24 12:13:16+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "cn.wps.moffice_eng",
+    "package_name": "cn.wps.moffice_eng",
+    "duration_seconds": 2,
+    "last_used": "2026-04-24 17:02:55+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "系统桌面",
+    "package_name": "com.miui.home",
+    "duration_seconds": 3999,
+    "last_used": "2026-04-25 11:17:52+00:00",
+    "event_count": 24
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.android.htmlviewer",
+    "package_name": "com.android.htmlviewer",
+    "duration_seconds": 3,
+    "last_used": "2026-04-25 07:02:36+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "夸夸手机同步",
+    "package_name": "com.kuakua.phonestats",
+    "duration_seconds": 2025,
+    "last_used": "2026-04-25 11:17:52+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "系统界面",
+    "package_name": "com.android.systemui",
+    "duration_seconds": 3,
+    "last_used": "2026-04-25 07:04:01+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "智能应用助手",
+    "package_name": "com.miui.thirdappassistant",
+    "duration_seconds": 2,
+    "last_used": "2026-04-25 07:27:03+00:00",
+    "event_count": 11
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "快应用服务框架",
+    "package_name": "com.miui.hybrid",
+    "duration_seconds": 1,
+    "last_used": "2026-04-25 07:26:57+00:00",
+    "event_count": 11
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "悬浮球",
+    "package_name": "com.miui.touchassistant",
+    "duration_seconds": 3,
+    "last_used": "2026-04-25 07:44:10+00:00",
+    "event_count": 11
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "系统功能组件",
+    "package_name": "com.miui.securitycore",
+    "duration_seconds": 0,
+    "last_used": "2026-04-25 07:44:12+00:00",
+    "event_count": 10
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "cn.damai",
+    "package_name": "cn.damai",
+    "duration_seconds": 335,
+    "last_used": "2026-04-25 11:00:22+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "权限控制器",
+    "package_name": "com.android.permissioncontroller",
+    "duration_seconds": 1,
+    "last_used": "2026-04-25 10:54:22+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-25",
+    "app_name": "com.taobao.taobao",
+    "package_name": "com.taobao.taobao",
+    "duration_seconds": 6,
+    "last_used": "2026-04-25 10:54:36+00:00",
+    "event_count": 1
+  }
+]

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron/main'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 
 let mainWindow: BrowserWindow | null = null

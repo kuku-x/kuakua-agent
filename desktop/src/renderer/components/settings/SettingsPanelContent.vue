@@ -44,24 +44,10 @@
 
         <div class="settings-sheet__field">
           <KuInput
-            v-model="openWeatherApiKeyInput"
-            type="password"
-            label="OpenWeather API Key"
-            placeholder="请输入 OpenWeather API Key"
-            :hint="
-              settings.openweather_api_key_set
-                ? '当前已经配置天气密钥，留空则保持现有设置。'
-                : '用于获取当前天气，生成更贴近环境的聊天和夸夸内容。'
-            "
-          />
-        </div>
-
-        <div class="settings-sheet__field">
-          <KuInput
             v-model="settings.openweather_location"
             label="天气位置"
             placeholder="Shanghai,CN"
-            hint="支持城市名或 城市,国家码，例如 Shanghai,CN。"
+            hint="免费天气服务无需 API Key，支持城市名或 城市,国家代码，例如 Shanghai,CN。"
           />
         </div>
 
@@ -74,7 +60,7 @@
             :hint="
               settings.fish_audio_api_key_set
                 ? '当前已经配置 Fish Audio 密钥，留空则保持现有设置。'
-                : '用于将夸夸内容转成语音播报。'
+                : '用于将夸夸内容转换成语音播报。'
             "
           />
         </div>
@@ -213,6 +199,31 @@
       </div>
     </section>
 
+    <section class="settings-sheet__section">
+      <div class="settings-sheet__head">
+        <p class="settings-sheet__eyebrow">Daily Quote</p>
+        <h3>每日一句</h3>
+      </div>
+
+      <div class="settings-sheet__stack">
+        <div class="settings-sheet__field">
+          <label class="settings-sheet__label">文案分类</label>
+          <select v-model="quoteCategory" class="settings-sheet__select">
+            <option v-for="cat in HITOKOTO_CATEGORIES" :key="cat.code" :value="cat.code">
+              {{ cat.label }}
+            </option>
+          </select>
+          <small class="settings-sheet__hint">选择你喜欢的文案类型，每天会显示该分类的一句话。</small>
+        </div>
+      </div>
+
+      <div class="settings-sheet__actions">
+        <KuButton variant="primary" @click="saveQuoteCategory">
+          保存分类
+        </KuButton>
+      </div>
+    </section>
+
     <section class="settings-sheet__section settings-sheet__section--danger">
       <div class="settings-sheet__head">
         <p class="settings-sheet__eyebrow">Danger Zone</p>
@@ -234,6 +245,7 @@ import KuButton from '@/components/base/KuButton.vue'
 import KuInput from '@/components/base/KuInput.vue'
 import { deleteAllData, getActivityWatchStatus, getSettings, updateSettings } from '@/api'
 import { praiseApi } from '@/api/praise'
+import { HITOKOTO_CATEGORIES, getSavedCategory, saveCategory } from '@/hooks/useHitokoto'
 import type { ActivityWatchStatus, PraiseConfig, SettingsPayload, SettingsResponse } from '@/types/api'
 import { handleApiError } from '@/utils/error'
 import { normalizeSettings } from '@/utils/validation'
@@ -242,14 +254,12 @@ const settings = ref<SettingsResponse>({
   aw_server_url: 'http://127.0.0.1:5600',
   data_masking: false,
   doubao_api_key_set: false,
-  openweather_api_key_set: false,
   openweather_location: 'Shanghai,CN',
   fish_audio_api_key_set: false,
   fish_audio_model: 's2-pro',
 })
 
 const apiKeyInput = ref('')
-const openWeatherApiKeyInput = ref('')
 const fishAudioApiKeyInput = ref('')
 const apiKeySet = ref(false)
 const saving = ref(false)
@@ -271,6 +281,8 @@ const praise = ref<PraiseConfig>({
 const praiseLoading = ref(false)
 const praiseSaveMsg = ref('')
 const praiseSaveSuccess = ref(false)
+
+const quoteCategory = ref(getSavedCategory())
 
 onMounted(async () => {
   await Promise.all([loadSettings(), loadPraiseConfig()])
@@ -328,14 +340,10 @@ async function saveSettings() {
     }
 
     const trimmedApiKey = apiKeyInput.value.trim()
-    const trimmedWeatherKey = openWeatherApiKeyInput.value.trim()
     const trimmedFishKey = fishAudioApiKeyInput.value.trim()
 
     if (trimmedApiKey) {
       payload.doubao_api_key = trimmedApiKey
-    }
-    if (trimmedWeatherKey) {
-      payload.openweather_api_key = trimmedWeatherKey
     }
     if (trimmedFishKey) {
       payload.fish_audio_api_key = trimmedFishKey
@@ -345,7 +353,6 @@ async function saveSettings() {
     settings.value = normalizeSettings(response.data.data)
     apiKeySet.value = settings.value.doubao_api_key_set
     apiKeyInput.value = ''
-    openWeatherApiKeyInput.value = ''
     fishAudioApiKeyInput.value = ''
     saveSuccess.value = true
     saveMessage.value = '设置已保存'
@@ -395,6 +402,10 @@ async function savePraiseConfig() {
   } finally {
     praiseLoading.value = false
   }
+}
+
+function saveQuoteCategory() {
+  saveCategory(quoteCategory.value)
 }
 </script>
 
@@ -578,5 +589,40 @@ async function savePraiseConfig() {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+.settings-sheet__label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+}
+
+.settings-sheet__select {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236c6c80' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-4) center;
+}
+
+.settings-sheet__select:focus {
+  outline: none;
+  border-color: var(--color-accent-soft);
+  box-shadow: 0 0 0 3px rgba(201, 138, 105, 0.12);
+}
+
+.settings-sheet__hint {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 </style>

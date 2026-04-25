@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getTodaySummary, getSummary } from '@/api'
-import type { SummaryData } from '@/types/api'
+import { fetchAggregatedUsage, getTodaySummary, getSummary } from '@/api'
+import type { AggregatedUsage, SummaryData } from '@/types/api'
 import { handleApiError } from '@/utils/error'
 import { normalizeSummary } from '@/utils/validation'
 
@@ -53,6 +53,73 @@ function shouldUseCachedSummary(cached: SummaryData | null, incoming: SummaryDat
   )
 }
 
+function mergeSummaryWithAggregate(summary: SummaryData, aggregate: AggregatedUsage): SummaryData {
+  const topAppsMap = new Map<string, { name: string; seconds: number; category: string }>()
+
+  const computerApps = aggregate.computer?.top_apps ?? []
+  const phoneApps = aggregate.phone?.top_apps ?? []
+
+  for (const app of [...computerApps, ...phoneApps]) {
+    // Handle both 'name' and 'Name' field from backend
+    const appName = app.name ?? (app as any).Name ?? ''
+    if (!appName) continue
+
+    const seconds = app.seconds ?? (app as any).duration ?? (app.hours ?? 0) * 3600
+    const category = app.category ?? 'other'
+    const current = topAppsMap.get(appName)
+    if (current) {
+      current.seconds += seconds
+      if (current.category === 'other' && category !== 'other') {
+        current.category = category
+      }
+    } else {
+      topAppsMap.set(appName, {
+        name: appName,
+        seconds,
+        category,
+      })
+    }
+  }
+
+  const combinedTopApps = Array.from(topAppsMap.values())
+    .sort((a, b) => b.seconds - a.seconds)
+    .slice(0, 10)
+    .map((app) => ({
+      name: app.name,
+      duration: Math.round((app.seconds / 3600) * 10) / 10,
+      category: app.category,
+    }))
+
+  const computerTotal = aggregate.computer?.total_hours ?? 0
+  const phoneTotal = aggregate.phone?.total_hours ?? 0
+  const combinedTotal = aggregate.combined?.total_hours ?? (computerTotal + phoneTotal)
+  const workHours = aggregate.combined?.work_hours ?? summary.work_hours
+  const entertainmentHours = aggregate.combined?.entertainment_hours ?? summary.entertainment_hours
+  const otherHours = Math.max(0, combinedTotal - workHours - entertainmentHours)
+
+  return {
+    ...summary,
+    total_hours: combinedTotal,
+    work_hours: workHours,
+    entertainment_hours: entertainmentHours,
+    other_hours: Math.round(otherHours * 10) / 10,
+    top_apps: combinedTopApps,
+    computer_hours: computerTotal,
+    phone_hours: phoneTotal,
+    phone_device_ids: aggregate.phone?.device_ids ?? summary.phone_device_ids ?? [],
+    computer_top_apps: computerApps.map((app) => ({
+      name: (app as any).name ?? (app as any).Name ?? '',
+      duration: (app as any).hours ?? ((app as any).seconds ?? (app as any).duration ?? 0) / 3600,
+      category: (app as any).category ?? 'other',
+    })).filter(app => app.name),
+    phone_top_apps: phoneApps.map((app) => ({
+      name: (app as any).name ?? (app as any).Name ?? '',
+      duration: (app as any).hours ?? ((app as any).seconds ?? (app as any).duration ?? 0) / 3600,
+      category: (app as any).category ?? 'other',
+    })).filter(app => app.name),
+  }
+}
+
 export const useSummaryStore = defineStore('summary', () => {
   const summary = ref<SummaryData | null>(loadCachedSummary())
   const loading = ref(false)
@@ -62,9 +129,17 @@ export const useSummaryStore = defineStore('summary', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await getTodaySummary()
-      if (response.data.status === 'success' && response.data.data) {
-        const nextSummary = normalizeSummary(response.data.data)
+      const [summaryResponse, aggregateResponse] = await Promise.all([
+        getTodaySummary(),
+        fetchAggregatedUsage(getTodayDateString()),
+      ])
+
+      if (summaryResponse.data.status === 'success' && summaryResponse.data.data) {
+        const baseSummary = normalizeSummary(summaryResponse.data.data)
+        const nextSummary =
+          aggregateResponse.data.status === 'success' && aggregateResponse.data.data
+            ? mergeSummaryWithAggregate(baseSummary, aggregateResponse.data.data)
+            : baseSummary
         const cachedSummary = loadCachedSummary()
 
         if (shouldUseCachedSummary(cachedSummary, nextSummary)) {
@@ -74,7 +149,7 @@ export const useSummaryStore = defineStore('summary', () => {
           saveCachedSummary(nextSummary)
         }
       } else {
-        error.value = response.data.message || '获取总结失败'
+        error.value = summaryResponse.data.message || '获取总结失败'
       }
     } catch (e: unknown) {
       error.value = handleApiError(e)
@@ -87,9 +162,17 @@ export const useSummaryStore = defineStore('summary', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await getSummary(date)
-      if (response.data.status === 'success' && response.data.data) {
-        const nextSummary = normalizeSummary(response.data.data)
+      const [summaryResponse, aggregateResponse] = await Promise.all([
+        getSummary(date),
+        fetchAggregatedUsage(date),
+      ])
+
+      if (summaryResponse.data.status === 'success' && summaryResponse.data.data) {
+        const baseSummary = normalizeSummary(summaryResponse.data.data)
+        const nextSummary =
+          aggregateResponse.data.status === 'success' && aggregateResponse.data.data
+            ? mergeSummaryWithAggregate(baseSummary, aggregateResponse.data.data)
+            : baseSummary
         summary.value = nextSummary
 
         if (nextSummary.date === getTodayDateString()) {
@@ -98,7 +181,7 @@ export const useSummaryStore = defineStore('summary', () => {
           clearCachedSummary()
         }
       } else {
-        error.value = response.data.message || '获取总结失败'
+        error.value = summaryResponse.data.message || '获取总结失败'
       }
     } catch (e: unknown) {
       error.value = handleApiError(e)

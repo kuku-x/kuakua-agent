@@ -80,11 +80,11 @@ class ActivityWatchClient:
                 return bid
         return None
 
-    def get_main_buckets(self) -> dict[str, str]:
+    def get_main_buckets(self) -> dict[str, str | None]:
         """获取主要 buckets 的 id 映射"""
         buckets = self.get_buckets()
         return {
-            "afk": self.get_bucket_by_type(buckets, "afkstatus") or "aw-watcher-afk",
-            "window": self.get_bucket_by_type(buckets, "currentwindow") or "aw-watcher-window",
-            "active": self.get_bucket_by_type(buckets, "activewindow") or "aw-watcher-activewindow",
+            "afk": self.get_bucket_by_type(buckets, "afkstatus"),
+            "window": self.get_bucket_by_type(buckets, "currentwindow"),
+            "active": self.get_bucket_by_type(buckets, "activewindow"),
         }

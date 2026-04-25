@@ -23,7 +23,6 @@ class SettingsService:
             aw_server_url=self._pref.get("aw_server_url") or "http://127.0.0.1:5600",
             data_masking=self._pref.get_bool("data_masking"),
             doubao_api_key_set=bool(self._pref.get("model_api_key")),
-            openweather_api_key_set=bool(self._pref.get("openweather_api_key")),
             openweather_location=self._pref.get("openweather_location") or "Shanghai,CN",
             fish_audio_api_key_set=bool(self._pref.get("fish_audio_api_key")),
             fish_audio_model=self._pref.get("fish_audio_model") or "s2-pro",
@@ -37,8 +36,6 @@ class SettingsService:
 
         if payload.doubao_api_key:
             self._pref.set("model_api_key", payload.doubao_api_key.strip())
-        if payload.openweather_api_key:
-            self._pref.set("openweather_api_key", payload.openweather_api_key.strip())
         if payload.fish_audio_api_key:
             self._pref.set("fish_audio_api_key", payload.fish_audio_api_key.strip())
 

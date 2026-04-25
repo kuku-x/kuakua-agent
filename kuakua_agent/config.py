@@ -15,7 +15,6 @@ class AppSettings(BaseSettings):
     ark_api_key: str = ""
     ark_model_id: str = ""
     ark_base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
-    openweather_api_key: str = ""
     openweather_location: str = "Shanghai,CN"
     fish_audio_api_key: str = ""
 

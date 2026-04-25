@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 【治愈温馨风色值体系】 -->
+    <!-- Primary colors - 陶土暖棕色 -->
+    <color name="primary">#D49A76</color>
+    <color name="primary_dark">#B88558</color>
+    <color name="primary_light">#E6B870</color>
+    <color name="on_primary">#FFFFFF</color>
+
+    <!-- Secondary colors - 浅棕色 -->
+    <color name="secondary">#A8856A</color>
+    <color name="on_secondary">#FFFFFF</color>
+
+    <!-- Surface colors -->
+    <color name="surface">#FFF9F3</color>
+    <color name="on_surface">#3D2B1F</color>
+
+    <!-- Background - 暖米白 -->
+    <color name="background">#FDF9F5</color>
+
+    <!-- Text colors -->
+    <color name="text_primary">#3D2B1F</color>
+    <color name="text_secondary">#7A6552</color>
+
+    <!-- Error colors -->
+    <color name="error">#B3261E</color>
+    <color name="on_error">#FFFFFF</color>
+
+    <!-- Status colors -->
+    <color name="status_running">#7CB385</color>
+    <color name="status_stopped">#E74C3C</color>
+    <color name="status_syncing">#E6B870</color>
+
+    <!-- Disabled/Muted color -->
+    <color name="disabled">#C9B7A6</color>
+
+    <!-- Accent warm colors for pie chart -->
+    <color name="warm_brown_main">#D49A76</color>
+    <color name="warm_yellow">#E6B870</color>
+    <color name="warm_mint">#7CB385</color>
+    <color name="warm_blue">#8DA9C4</color>
+    <color name="warm_purple">#B497C8</color>
+
+    <!-- Dark mode colors - 保留��不使用 -->
+    <color name="primary_dark_mode">#90CAF9</color>
+    <color name="surface_dark">#1C1B1F</color>
+    <color name="on_surface_dark">#E6E1E5</color>
+    <color name="background_dark">#0F1419</color>
+    <color name="text_primary_dark">#E6E1E5</color>
+    <color name="text_secondary_dark">#CAC4D0</color>
+</resources>

@@ -19,6 +19,55 @@ ENTERTAINMENT_KEYWORDS = {
     "netflix", "steam", "game", "discord", "weibo", "xiaohongshu",
 }
 
+APP_NAME_MAP = {
+    "msedge": "Microsoft Edge",
+    "chrome": "Google Chrome",
+    "firefox": "Mozilla Firefox",
+    "code": "Visual Studio Code",
+    "explorer": "文件资源管理器",
+    "electron": "Electron",
+    "obsidian": "Obsidian",
+    "qq": "QQ",
+    "wechat": "微信",
+    "dingtalk": "钉钉",
+    "feishu": "飞书",
+    "wps": "WPS Office",
+    "word": "Microsoft Word",
+    "excel": "Microsoft Excel",
+    "powerpoint": "Microsoft PowerPoint",
+    "outlook": "Microsoft Outlook",
+    "terminal": "Windows Terminal",
+    "powershell": "PowerShell",
+    "cmd": "命令提示符",
+    "pycharm": "PyCharm",
+    "idea": "IntelliJ IDEA",
+    "webstorm": "WebStorm",
+    "goland": "GoLand",
+    "rider": "JetBrains Rider",
+    "clion": "CLion",
+    "datagrip": "DataGrip",
+    "notion": "Notion",
+    "slack": "Slack",
+    "teams": "Microsoft Teams",
+    "zoom": "Zoom",
+    "discord": "Discord",
+    "spotify": "Spotify",
+    "music": "网易云音乐",
+    "qqmusic": "QQ音乐",
+    "netease": "网易云音乐",
+    "bilibili": "哔哩哔哩",
+    "douyin": "抖音",
+    "youtube": "YouTube",
+    "netflix": "Netflix",
+    "steam": "Steam",
+    "postman": "Postman",
+    "figma": "Figma",
+    "github": "GitHub",
+    "git": "Git",
+    "cursor": "Cursor",
+    "arc": "Arc Browser",
+}
+
 
 @dataclass
 class _UsageStats:
@@ -62,7 +111,7 @@ class SummaryService:
                 other_hours=0,
                 top_apps=[],
                 focus_score=0,
-                praise_text="今天还没有采集到 ActivityWatch 使用记录。",
+                praise_text="今天还没有记录。",
                 suggestions=["确认 ActivityWatch 正在运行，然后回来看看今天的使用摘要。"],
             )
 
@@ -149,14 +198,30 @@ class SummaryService:
         return max((overlap_end - overlap_start).total_seconds(), 0.0)
 
     def _normalize_app_name(self, data: object) -> str:
-        if isinstance(data, dict):
-            app = str(data.get("app") or "").strip()
-            title = str(data.get("title") or "").strip()
-            if app:
-                return app
-            if title:
-                return title[:40]
+        if not isinstance(data, dict):
+            return "Unknown"
+
+        app = str(data.get("app") or "").strip()
+        title = str(data.get("title") or "").strip()
+
+        if app:
+            return self._display_app_name(app)
+        if title:
+            return title[:40]
         return "Unknown"
+
+    def _display_app_name(self, app: str) -> str:
+        app_key = app.lower()
+        if app_key.endswith(".exe"):
+            app_key = app_key[:-4]
+
+        normalized = APP_NAME_MAP.get(app_key)
+        if normalized:
+            return normalized
+
+        if app.lower().endswith(".exe"):
+            return app[:-4]
+        return app
 
     def _categorize_app(self, app_name: str) -> str:
         app_lower = app_name.lower()
@@ -183,13 +248,13 @@ class SummaryService:
         top_apps: list[AppUsage],
     ) -> str:
         if total_hours <= 0:
-            return "今天还没有形成可复盘的使用轨迹。"
+            return "今天的记录还不多，没关系，慢慢开始也很好。"
         lead_app = top_apps[0].name if top_apps else "当前设备"
         if focus_score >= 80:
-            return f"今天状态很稳，累计活跃 {total_hours} 小时，在 {lead_app} 上保持了很强的专注节奏。"
+            return f"今天的状态很稳，已经累计投入 {total_hours} 小时，尤其是在 {lead_app} 上，你把节奏握得很好。"
         if work_hours >= max(total_hours * 0.5, 1):
-            return f"今天已经投入 {work_hours} 小时在工作相关任务上，节奏在持续推进。"
-        return f"今天累计活跃 {total_hours} 小时，已经留下了一条清晰的使用轨迹，可以继续把注意力收拢一点。"
+            return f"今天你已经踏踏实实投入了 {work_hours} 小时在工作上，这样一点点往前推，其实很厉害。"
+        return f"今天已经累计活跃 {total_hours} 小时了，节奏不算乱，接下来再把注意力轻轻收回来一点就很好。"
 
     def _build_suggestions(
         self,
@@ -204,15 +269,15 @@ class SummaryService:
         if total_hours <= 0:
             return ["先让 ActivityWatch 持续记录一段时间，再回来查看更完整的总结。"]
         if focus_score < 50:
-            suggestions.append("试着给接下来的一段任务留出 25 分钟不切窗的专注时间。")
+            suggestions.append("如果你愿意，接下来给自己留 25 分钟安安静静做一件事，可能会轻松很多。")
         if entertainment_hours > work_hours and entertainment_hours >= 1:
-            suggestions.append("娱乐时间已经超过工作时间，下一段可以先推进一个最小可完成任务。")
+            suggestions.append("已经放松过一阵啦，接下来哪怕只往前推一点点，也会更踏实。")
         if other_hours >= max(total_hours * 0.4, 1):
-            suggestions.append("今天有不少时间落在未分类应用上，可以顺手标记下哪些窗口最容易打断你。")
+            suggestions.append("今天有些注意力被零散带走了，不用急，记下一两个最容易打断你的窗口就已经很有帮助了。")
         if work_hours >= 3:
-            suggestions.append("工作投入已经不低了，记得安排一次起身活动或短暂离屏休息。")
+            suggestions.append("你今天已经投入很多了，起身活动一下，或者离开屏幕缓一缓，也算认真照顾自己。")
         if not suggestions:
-            suggestions.append("整体节奏不错，继续保持当前这段使用模式就很好。")
+            suggestions.append("今天的节奏其实已经挺舒服了，别太苛求自己，照着现在的状态慢慢往下走就很好。")
         return suggestions[:3]
 
     def _round_hours(self, seconds: float, digits: int = 1) -> float:

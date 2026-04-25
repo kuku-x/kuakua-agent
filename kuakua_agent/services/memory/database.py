@@ -47,9 +47,18 @@ CREATE TABLE IF NOT EXISTS feedback_logs (
     FOREIGN KEY (praise_id) REFERENCES praise_history(id)
 );
 
+CREATE TABLE IF NOT EXISTS chat_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_milestones_occurred ON milestones(occurred_at);
 CREATE INDEX IF NOT EXISTS idx_praise_history_created ON praise_history(created_at);
 CREATE INDEX IF NOT EXISTS idx_feedback_praise ON feedback_logs(praise_id);
+CREATE INDEX IF NOT EXISTS idx_chat_history_chat_id ON chat_history(chat_id);
 """
 
 

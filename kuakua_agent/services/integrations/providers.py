@@ -27,17 +27,13 @@ class ActivityWatchIntegration(IntegrationProvider):
             configured=True,
             healthy=healthy,
             capabilities=self.capabilities,
-            message=(
-                f"已连接，检测到 {len(buckets)} 个 buckets"
-                if healthy
-                else f"未连接，请检查地址 {base_url}"
-            ),
+            message=(f"已连接，检测到 {len(buckets)} 个 buckets" if healthy else f"未连接，请检查地址 {base_url}"),
         )
 
 
 class OpenWeatherIntegration(IntegrationProvider):
-    name = "openweather"
-    display_name = "OpenWeather"
+    name = "weather"
+    display_name = "Open-Meteo"
     capabilities = ["weather", "context", "location"]
 
     def __init__(self, pref_store: PreferenceStore | None = None) -> None:
@@ -45,15 +41,14 @@ class OpenWeatherIntegration(IntegrationProvider):
         self._weather = WeatherService(self._pref)
 
     def health_check(self) -> IntegrationHealth:
-        api_key = self._pref.get("openweather_api_key") or getattr(settings, "openweather_api_key", "")
         location = self._pref.get("openweather_location") or getattr(settings, "openweather_location", "Shanghai,CN")
-        configured = bool(api_key)
-        summary = self._weather.get_weather_summary() if configured else "未配置 API Key"
+        configured = bool(location.strip())
+        summary = self._weather.get_weather_summary() if configured else "未配置天气位置"
         healthy = configured and summary != "未知"
         return IntegrationHealth(
             name=self.name,
             display_name=self.display_name,
-            enabled=configured,
+            enabled=True,
             configured=configured,
             healthy=healthy,
             capabilities=self.capabilities,
@@ -81,9 +76,5 @@ class FishAudioIntegration(IntegrationProvider):
             configured=configured,
             healthy=healthy,
             capabilities=self.capabilities,
-            message=(
-                "已配置，可用于语音播报"
-                if healthy
-                else "未就绪，请补充 Fish Audio API Key 和 Fish Voice ID"
-            ),
+            message=("已配置，可用于语音播报" if healthy else "未就绪，请补全 Fish Audio API Key 和 Fish Voice ID"),
         )

@@ -12,6 +12,7 @@ import type {
   MilestoneResponse,
   ProfileResponse,
   FeedbackCreate,
+  AggregatedUsage,
 } from '@/types/api'
 
 const api = axios.create({
@@ -89,5 +90,8 @@ export const getProfiles = () => api.get<ApiResponse<ProfileResponse[]>>('/memor
 
 export const submitFeedback = (data: FeedbackCreate) =>
   api.post<ApiResponse<{ recorded: boolean }>>('/feedback', data)
+
+export const fetchAggregatedUsage = (date: string) =>
+  api.get<ApiResponse<AggregatedUsage>>('/usage/aggregate', { params: { date } })
 
 export default api

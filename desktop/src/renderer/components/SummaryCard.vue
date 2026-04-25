@@ -9,7 +9,7 @@
       <article class="summary-card__stat">
         <span>总时长</span>
         <strong>{{ summary.total_hours }}</strong>
-        <small>活跃小时</small>
+        <small>{{ summaryBreakdown }}</small>
       </article>
       <article class="summary-card__stat">
         <span>工作</span>
@@ -38,16 +38,23 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { SummaryData } from '@/store/summary'
 
-defineProps<{
+const props = defineProps<{
   summary: SummaryData
 }>()
+
+const summaryBreakdown = computed(() => {
+  if (!props.summary.phone_hours) return '活跃小时'
+  return `电脑 ${props.summary.computer_hours ?? 0}h / 手机 ${props.summary.phone_hours}h`
+})
 </script>
 
 <style scoped>
 .summary-card {
   display: flex;
+  height: 100%;
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-8);
@@ -116,7 +123,7 @@ defineProps<{
 
 .summary-card__suggestions-title {
   margin-bottom: var(--space-3);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -130,6 +137,7 @@ defineProps<{
 
 .summary-card__suggestions li {
   padding-top: var(--space-3);
+  font-size: var(--font-size-base);
   line-height: var(--line-height-relaxed);
   border-top: 1px solid var(--color-border);
 }

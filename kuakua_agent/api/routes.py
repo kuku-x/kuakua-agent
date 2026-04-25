@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -249,3 +250,133 @@ async def submit_feedback(payload: FeedbackCreate) -> ApiResponse[dict]:
     store = FeedbackStore()
     store.add(praise_id=payload.praise_id, reaction=payload.reaction)
     return ApiResponse(data={"recorded": True})
+
+
+# ============ 手机数据聚合查询 ============
+
+@router.get("/usage/aggregate", response_model=ApiResponse[dict])
+async def get_aggregated_usage(date: str, device_id: str | None = None):
+    """
+    聚合查询电脑 + 手机使用数据
+    """
+    from datetime import datetime, timedelta
+    from ..services.phone_usage_service import get_phone_usage_service
+    from ..services.activitywatch import ActivityWatchClient
+    from ..services.settings_service import get_settings_service
+
+    phone_service = get_phone_usage_service()
+    settings = settings_service.get_settings()
+    aw_client = ActivityWatchClient(base_url=settings.aw_server_url)
+
+    # 获取日期范围（当天 00:00 到 23:59）
+    target_date = datetime.strptime(date, "%Y-%m-%d")
+    start = target_date.replace(hour=0, minute=0, second=0)
+    end = target_date.replace(hour=23, minute=59, second=59)
+
+    # 1. 获取手机数据（简单累加）
+    if device_id:
+        phone_entries = phone_service.get_daily_usage(device_id, date)
+        phone_devices = [device_id]
+    else:
+        all_phone_entries = phone_service.get_daily_usage_all_devices(date)
+        phone_entries = [entry for entries in all_phone_entries.values() for entry in entries]
+        phone_devices = list(all_phone_entries.keys())
+
+    phone_total_seconds = sum(e.duration_seconds for e in phone_entries)
+    phone_top_apps = [
+        {"name": e.app_name, "duration": e.duration_seconds, "seconds": e.duration_seconds, "hours": round(e.duration_seconds / 3600, 1), "category": _guess_category(e.app_name)}
+        for e in sorted(phone_entries, key=lambda x: x.duration_seconds, reverse=True)[:10]
+    ]
+
+    # 2. 获取电脑数据（从 ActivityWatch）
+    computer_data = _get_computer_usage_from_aw(aw_client, start, end)
+    computer_total_seconds = computer_data["total_seconds"]
+    computer_top_apps = computer_data["top_apps"]
+
+    # 3. 合并统计
+    total_hours = round((phone_total_seconds + computer_total_seconds) / 3600, 1)
+    work_hours = round(computer_data.get("work_hours", 0), 1)
+    entertainment_hours = round(
+        computer_data.get("entertainment_hours", 0) +
+        phone_service.get_entertainment_seconds(phone_entries) / 3600,
+        1
+    )
+
+    return ApiResponse(data={
+        "date": date,
+        "computer": {
+            "total_seconds": computer_total_seconds,
+            "total_hours": round(computer_total_seconds / 3600, 1),
+            "top_apps": computer_top_apps
+        },
+        "phone": {
+            "device_ids": phone_devices,
+            "total_seconds": phone_total_seconds,
+            "total_hours": round(phone_total_seconds / 3600, 1),
+            "top_apps": phone_top_apps
+        },
+        "combined": {
+            "total_hours": total_hours,
+            "work_hours": work_hours,
+            "entertainment_hours": entertainment_hours
+        }
+    })
+
+
+def _get_computer_usage_from_aw(aw_client, start: datetime, end: datetime) -> dict:
+    """从 ActivityWatch 获取电脑使用数据"""
+    main_buckets = aw_client.get_main_buckets()
+    window_bucket = main_buckets.get("window")
+    if not window_bucket:
+        return {"total_seconds": 0, "top_apps": [], "work_hours": 0, "entertainment_hours": 0}
+
+    events = aw_client.get_events(window_bucket, start, end, limit=1000)
+
+    # 按 App 分组统计时长
+    app_times: dict[str, int] = {}
+    for event in events:
+        data = event.get("data", {})
+        app = data.get("app", data.get("title", "Unknown"))
+        duration = event.get("duration", 0)
+        if app in app_times:
+            app_times[app] += duration
+        else:
+            app_times[app] = duration
+
+    total_seconds = sum(app_times.values())
+    top_apps = [
+        {"name": name, "duration": secs, "seconds": secs, "hours": round(secs / 3600, 1), "category": _guess_category(name)}
+        for name, secs in sorted(app_times.items(), key=lambda x: x[1], reverse=True)[:10]
+    ]
+
+    # 粗略估算工作/娱乐时间
+    work_hours = sum(secs / 3600 for name, secs in app_times.items() if _guess_category(name) == "work")
+    entertainment_hours = sum(secs / 3600 for name, secs in app_times.items() if _guess_category(name) == "entertainment")
+
+    return {
+        "total_seconds": total_seconds,
+        "top_apps": top_apps,
+        "work_hours": round(work_hours, 1),
+        "entertainment_hours": round(entertainment_hours, 1)
+    }
+
+
+def _guess_category(app_name: str) -> str:
+    """根据 App 名称猜测分类"""
+    app_lower = app_name.lower()
+
+    work_keywords = ["code", "vscode", "idea", "pycharm", "webstorm", "terminal", "cmd", "powershell",
+                    "notion", "obsidian", "evernote", "word", "excel", "ppt", "pdf", "mail", "outlook",
+                    "slack", "feishu", "dingtalk", "wechat work", "企业微信", "钉钉", "飞书"]
+
+    entertainment_keywords = ["youtube", "bilibili", "抖音", "tiktok", "netflix", "spotify", "music",
+                            "游戏", "game", "steam", "epic", "lol", "原神", "genshin", "minecraft",
+                            "微博", "twitter", "x.com", "reddit", "zhihu", "知乎", "douyin"]
+
+    for kw in work_keywords:
+        if kw in app_lower:
+            return "work"
+    for kw in entertainment_keywords:
+        if kw in app_lower:
+            return "entertainment"
+    return "other"

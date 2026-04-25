@@ -8,21 +8,27 @@ __pycache__/
 
 # Environment files (API keys)
 .env
-desktop/.env
 
 # Desktop app build outputs
 desktop/out/
 desktop/dist/
 desktop/release/
-
-# Dependencies (external)
-deps/activitywatch/
-deps/activitywatch-master/
+desktop/node_modules/
 
 # Python
 *.egg-info/
 .eggs/
+.pytest_cache/
 
-# Local app data and tool configs
+# Android build artifacts
+phone_stats_sync/.gradle/
+phone_stats_sync/.idea/
+phone_stats_sync/app/build/
+phone_stats_sync/build/
+
+# Local app data and configs
 kuakua_agent.db
 .claude/
+
+# External dependencies
+deps/

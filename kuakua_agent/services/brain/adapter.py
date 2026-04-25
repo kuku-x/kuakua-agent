@@ -1,3 +1,4 @@
+import codecs
 import httpx
 from kuakua_agent.config import settings
 from kuakua_agent.services.memory import PreferenceStore
@@ -82,7 +83,7 @@ class ModelAdapter:
         return result["choices"][0]["message"]["content"].strip()
 
     async def stream_complete_async(self, messages: list[dict], temperature: float = 0.8, max_tokens: int = 500):
-        """异步流式生成，返回可迭代对象"""
+        """异步流式生成，返回可迭代对象，逐字产出无缓冲"""
         payload = {
             "model": self.model_id,
             "messages": messages,
@@ -94,18 +95,34 @@ class ModelAdapter:
             async with client.stream("POST", f"{self.base_url}/chat/completions", headers=self._headers(), json=payload) as response:
                 if response.status_code != 200:
                     raise Exception(f"API调用失败: {response.status_code} - {response.text}")
-                async for line in response.aiter_lines():
-                    if not line:
+                decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+                buffer = b""
+
+                async for raw_bytes in response.aiter_bytes(chunk_size=64):
+                    if not raw_bytes:
                         continue
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
-                        import json
+                    buffer += raw_bytes
+
+                    # 尝试解析完整的 data: 开头的行
+                    while b"\n" in buffer:
+                        line, buffer = buffer.split(b"\n", 1)
                         try:
-                            chunk = json.loads(data)
+                            decoded_line = line.decode("utf-8")
+                        except UnicodeDecodeError:
+                            decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+                            decoded_line = decoder.decode(line)
+                            decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+
+                        if not decoded_line.startswith("data: "):
+                            continue
+                        data = decoded_line[6:]
+                        if data == "[DONE]":
+                            return
+                        import json as _json
+                        try:
+                            chunk = _json.loads(data)
                             content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
                             if content:
                                 yield content
-                        except json.JSONDecodeError:
+                        except _json.JSONDecodeError:
                             continue

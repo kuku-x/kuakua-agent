@@ -8,6 +8,39 @@ export interface AppUsage {
   name: string
   duration: number
   category: 'work' | 'entertainment' | 'other' | string
+  // 后端返回的额外字段
+  seconds?: number
+  hours?: number
+  Name?: string  // 后端用大写
+}
+
+export interface AggregatedAppUsage {
+  name: string
+  duration: number
+  seconds: number
+  hours: number
+  category: string
+  Name?: string
+}
+
+export interface DeviceUsage {
+  total_seconds: number
+  total_hours: number
+  top_apps: AggregatedAppUsage[]
+  device_ids?: string[]
+}
+
+export interface CombinedUsage {
+  total_hours: number
+  work_hours: number
+  entertainment_hours: number
+}
+
+export interface AggregatedUsage {
+  date: string
+  computer: DeviceUsage
+  phone: DeviceUsage
+  combined: CombinedUsage
 }
 
 export interface SummaryData {
@@ -20,6 +53,11 @@ export interface SummaryData {
   focus_score: number
   praise_text: string
   suggestions: string[]
+  computer_hours?: number
+  phone_hours?: number
+  phone_device_ids?: string[]
+  computer_top_apps?: AppUsage[]
+  phone_top_apps?: AppUsage[]
 }
 
 export interface ChatContext {
@@ -42,7 +80,6 @@ export interface SettingsPayload {
   aw_server_url: string
   data_masking: boolean
   doubao_api_key?: string
-  openweather_api_key?: string
   openweather_location: string
   fish_audio_api_key?: string
   fish_audio_model: string
@@ -52,7 +89,6 @@ export interface SettingsResponse {
   aw_server_url: string
   data_masking: boolean
   doubao_api_key_set: boolean
-  openweather_api_key_set: boolean
   openweather_location: string
   fish_audio_api_key_set: boolean
   fish_audio_model: string
@@ -94,4 +130,28 @@ export interface ProfileResponse {
 export interface FeedbackCreate {
   praise_id: number
   reaction: 'liked' | 'disliked' | 'neutral'
+}
+
+// ============ 手机使用数据类型 ============
+
+export interface PhoneUsageEntry {
+  date: string
+  app_name: string
+  package_name: string
+  duration_seconds: number
+  last_used: string | null
+  event_count: number
+}
+
+export interface PhoneSyncRequest {
+  device_id: string
+  device_name: string
+  entries: PhoneUsageEntry[]
+  sync_time: string
+}
+
+export interface PhoneSyncResponse {
+  success: boolean
+  synced_count: number
+  message: string
 }

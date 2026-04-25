@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-04-25",
+    "app_name": "WeChat",
+    "package_name": "com.tencent.mm",
+    "duration_seconds": 3600,
+    "last_used": null,
+    "event_count": 10
+  }
+]

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "专属行为感知AI夸夸Agent",
   "main": "dist/main/index.js",
+  "author": "kuakua",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "vue-tsc --noEmit && electron-vite build",
@@ -29,8 +30,8 @@
     "vue-tsc": "^3.2.7"
   },
   "build": {
-    "appId": "com.kuakua.agent",
-    "productName": "夸夸Agent",
+    "appId": "com.kuakua.app",
+    "productName": "夸夸app",
     "directories": {
       "output": "release"
     },
@@ -38,12 +39,8 @@
       "dist/**/*"
     ],
     "win": {
-      "target": "nsis",
-      "icon": "public/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "target": "portable",
+      "sign": false
     }
   }
 }

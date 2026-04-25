@@ -5,7 +5,6 @@
         <div>
           <p class="chat-page__eyebrow">Companion Mode</p>
           <h2>从今天的状态开始，慢慢聊一会儿</h2>
-          <p>这里会结合你今天的摘要、当前感受和上下文，给出温暖、有连续感的回应。</p>
         </div>
       </KuCard>
 
@@ -59,7 +58,7 @@
         <div class="chat-page__panel-head">
           <div>
             <p class="chat-page__eyebrow">Quick Start</p>
-            <h3>选一个轻量入口开始今天的对话</h3>
+            <h3>选择一种模式</h3>
           </div>
         </div>
 
