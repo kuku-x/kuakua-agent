@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="6dp">
+
+    <!-- Left column: Color dot + App name + Duration -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <View
+            android:id="@+id/color_dot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/shape_circle"
+            tools:background="#D49A76" />
+
+        <TextView
+            android:id="@+id/app_name_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold"
+            tools:text="微信 2小时15分钟" />
+
+    </LinearLayout>
+
+    <!-- Right column: Percentage -->
+    <TextView
+        android:id="@+id/percentage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textColor="@color/text_secondary"
+        android:textStyle="bold"
+        android:layout_marginStart="16dp"
+        tools:text="45.2%" />
+
+</LinearLayout></content>
+<parameter name="filePath">D:\project\kuakua-agent\phone_stats_sync\app\src\main\res\layout\item_pie_legend.xml
