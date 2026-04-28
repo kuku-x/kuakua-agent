@@ -1,6 +1,8 @@
-# 夸夸手机同步 (Phone Stats Sync)
+# 夸夸手机同步（Phone Stats Sync）
 
-Android App，将手机使用时长同步到 Kuakua 夸夸 Agent。
+这是一个 **手机使用统计采集与同步器**（不是单机“夸夸 App”）。
+
+它负责在手机端采集 UsageStats/会话等数据，并同步到电脑端 Kuakua Agent 后端；夸夸对话与偏好配置等能力在电脑端后端完成。
 
 ## 功能
 

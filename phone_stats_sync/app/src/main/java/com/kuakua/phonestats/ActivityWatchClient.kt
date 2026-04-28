@@ -16,7 +16,7 @@ class ActivityWatchClient(private val context: Context) {
         timeZone = TimeZone.getTimeZone("UTC")
     }
 
-    suspend fun sendSessions(sessions: List<AppSession>): Boolean {
+    suspend fun sendSessions(sessions: List<AppUsageSession>): Boolean {
         return withContext(Dispatchers.IO) {
             try {
                 val baseUrl = AppPrefs.getActivityWatchUrl(context).trimEnd('/')
@@ -38,7 +38,11 @@ class ActivityWatchClient(private val context: Context) {
                         put("duration", session.durationMs / 1000.0)
                         put("data", JSONObject().apply {
                             put("app", session.packageName)
-                            put("title", getAppName(session.packageName))
+                            put("title", session.appName)
+                            put("source", session.source.name.lowercase(Locale.US))
+                            put("confidence", session.confidence.name.lowercase(Locale.US))
+                            put("screen_on", session.screenOn)
+                            put("unlocked", session.unlocked)
                         })
                     }
                 }
@@ -89,15 +93,6 @@ class ActivityWatchClient(private val context: Context) {
             responseCode in 200..299 || responseCode == 304 // 304 means already exists
         } catch (e: Exception) {
             false
-        }
-    }
-
-    private fun getAppName(packageName: String): String {
-        return try {
-            val appInfo = context.packageManager.getApplicationInfo(packageName, 0)
-            context.packageManager.getApplicationLabel(appInfo).toString()
-        } catch (e: Exception) {
-            packageName
         }
     }
 }

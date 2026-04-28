@@ -168,19 +168,22 @@ const computerUsage = computed(() => {
 const phoneUsage = computed(() => {
   const summary = store.summary
   const totalHours = summary?.phone_hours ?? 0
-  const topApps = (summary?.phone_top_apps?.length ?? 0) > 0 && totalHours > 0
-    ? summary!.phone_top_apps
-    : []
-  const workHours = 0
-  const entertainmentHours = 0
-  const otherHours = totalHours
+  const topApps =
+    totalHours > 0 && (summary?.phone_top_apps?.length ?? 0) > 0 ? (summary?.phone_top_apps ?? []) : []
+  const workHours = topApps
+    .filter((app) => app.category === 'work')
+    .reduce((sum, app) => sum + app.duration, 0)
+  const entertainmentHours = topApps
+    .filter((app) => app.category === 'entertainment')
+    .reduce((sum, app) => sum + app.duration, 0)
+  const otherHours = Math.max(0, totalHours - workHours - entertainmentHours)
 
   return {
     totalHours,
     topApps,
-    workHours,
-    entertainmentHours,
-    otherHours,
+    workHours: Math.round(workHours * 10) / 10,
+    entertainmentHours: Math.round(entertainmentHours * 10) / 10,
+    otherHours: Math.round(otherHours * 10) / 10,
   }
 })
 

@@ -8,6 +8,8 @@ class SettingsPayload(BaseModel):
     openweather_location: str = Field(default="Shanghai,CN", min_length=1, max_length=128)
     fish_audio_api_key: str | None = Field(default=None, min_length=8, max_length=4096)
     fish_audio_model: str = Field(default="s2-pro", min_length=1, max_length=128)
+    nightly_summary_enable: bool = True
+    nightly_summary_time: str = Field(default="21:30", min_length=5, max_length=5)
 
 
 class SettingsResponse(BaseModel):
@@ -17,6 +19,8 @@ class SettingsResponse(BaseModel):
     openweather_location: str
     fish_audio_api_key_set: bool
     fish_audio_model: str
+    nightly_summary_enable: bool
+    nightly_summary_time: str
 
 
 class ActivityWatchCheckPayload(BaseModel):

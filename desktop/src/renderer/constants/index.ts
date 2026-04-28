@@ -1,5 +1,5 @@
-// API配置
-export const API_BASE_URL = 'http://localhost:8001/api'
+// API配置（可通过桌面端 `desktop/.env` 覆盖）
+export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8001/api'
 
 // 错误消息
 export const ERROR_MESSAGES = {

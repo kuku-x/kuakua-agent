@@ -1,0 +1,258 @@
+[
+  {
+    "date": "2026-04-28",
+    "app_name": "com.hpbr.bosszhipin",
+    "package_name": "com.hpbr.bosszhipin",
+    "duration_seconds": 24,
+    "last_used": "2026-04-27 08:14:32+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.tencent.tmgp.sgame",
+    "package_name": "com.tencent.tmgp.sgame",
+    "duration_seconds": 78,
+    "last_used": "2026-04-27 15:05:14+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "美团",
+    "package_name": "com.sankuai.meituan",
+    "duration_seconds": 1169,
+    "last_used": "2026-04-27 13:46:34+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.miui.gallery",
+    "package_name": "com.miui.gallery",
+    "duration_seconds": 203,
+    "last_used": "2026-04-27 15:56:22+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "安全服务",
+    "package_name": "com.miui.securitycenter",
+    "duration_seconds": 62,
+    "last_used": "2026-04-28 06:16:17+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "浏览器",
+    "package_name": "com.android.browser",
+    "duration_seconds": 358,
+    "last_used": "2026-04-28 06:23:06+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.xingin.xhs",
+    "package_name": "com.xingin.xhs",
+    "duration_seconds": 1094,
+    "last_used": "2026-04-28 03:38:41+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "微信",
+    "package_name": "com.tencent.mm",
+    "duration_seconds": 2342,
+    "last_used": "2026-04-28 05:16:29+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.bwton.msx.cqb",
+    "package_name": "com.bwton.msx.cqb",
+    "duration_seconds": 6,
+    "last_used": "2026-04-27 09:38:56+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.android.mms",
+    "package_name": "com.android.mms",
+    "duration_seconds": 27,
+    "last_used": "2026-04-27 12:46:19+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.android.incallui",
+    "package_name": "com.android.incallui",
+    "duration_seconds": 17,
+    "last_used": "2026-04-27 13:41:57+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "拼多多",
+    "package_name": "com.xunmeng.pinduoduo",
+    "duration_seconds": 2,
+    "last_used": "2026-04-27 09:29:57+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.iss.shenzhenmetro",
+    "package_name": "com.iss.shenzhenmetro",
+    "duration_seconds": 58,
+    "last_used": "2026-04-28 02:32:14+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "抖音",
+    "package_name": "com.ss.android.ugc.aweme",
+    "duration_seconds": 16486,
+    "last_used": "2026-04-28 06:10:43+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "QQ",
+    "package_name": "com.tencent.mobileqq",
+    "duration_seconds": 105,
+    "last_used": "2026-04-28 05:49:13+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "笔记",
+    "package_name": "com.miui.notes",
+    "duration_seconds": 10,
+    "last_used": "2026-04-28 05:55:09+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "应用商店",
+    "package_name": "com.xiaomi.market",
+    "duration_seconds": 19,
+    "last_used": "2026-04-28 06:21:00+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "番茄小说",
+    "package_name": "com.dragon.read",
+    "duration_seconds": 4517,
+    "last_used": "2026-04-28 04:25:12+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "Bluetooth Extension",
+    "package_name": "com.xiaomi.bluetooth",
+    "duration_seconds": 7,
+    "last_used": "2026-04-28 05:31:51+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.larus.nova",
+    "package_name": "com.larus.nova",
+    "duration_seconds": 748,
+    "last_used": "2026-04-27 13:28:20+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "设置",
+    "package_name": "com.android.settings",
+    "duration_seconds": 187,
+    "last_used": "2026-04-28 06:16:20+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "高德地图",
+    "package_name": "com.autonavi.minimap",
+    "duration_seconds": 4244,
+    "last_used": "2026-04-28 02:35:54+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.taobao.idlefish",
+    "package_name": "com.taobao.idlefish",
+    "duration_seconds": 1007,
+    "last_used": "2026-04-27 13:33:57+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "超级小爱",
+    "package_name": "com.miui.voiceassist",
+    "duration_seconds": 162,
+    "last_used": "2026-04-28 02:51:35+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "微博",
+    "package_name": "com.sina.weibo",
+    "duration_seconds": 183,
+    "last_used": "2026-04-27 15:03:21+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.baidu.netdisk",
+    "package_name": "com.baidu.netdisk",
+    "duration_seconds": 7,
+    "last_used": "2026-04-27 09:16:44+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "哔哩哔哩",
+    "package_name": "tv.danmaku.bili",
+    "duration_seconds": 3485,
+    "last_used": "2026-04-28 05:53:09+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "支付宝",
+    "package_name": "com.eg.android.AlipayGphone",
+    "duration_seconds": 137,
+    "last_used": "2026-04-28 06:04:02+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "com.greenpoint.android.mc10086.activity",
+    "package_name": "com.greenpoint.android.mc10086.activity",
+    "duration_seconds": 1,
+    "last_used": "2026-04-27 05:06:48+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "传送门",
+    "package_name": "com.miui.contentextension",
+    "duration_seconds": 2,
+    "last_used": "2026-04-28 05:13:05+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "小米澎湃AI引擎",
+    "package_name": "com.xiaomi.aicr",
+    "duration_seconds": 0,
+    "last_used": "2026-04-28 05:49:13+00:00",
+    "event_count": 1
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "夸克浏览器",
+    "package_name": "com.quark.browser",
+    "duration_seconds": 19,
+    "last_used": "2026-04-28 06:21:22+00:00",
+    "event_count": 1
+  }
+]

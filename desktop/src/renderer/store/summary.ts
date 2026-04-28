@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { fetchAggregatedUsage, getTodaySummary, getSummary } from '@/api'
 import type { AggregatedUsage, SummaryData } from '@/types/api'
 import { handleApiError } from '@/utils/error'
-import { normalizeSummary } from '@/utils/validation'
+import { normalizeAppName, normalizeSummary } from '@/utils/validation'
 
 export type { SummaryData }
 
@@ -39,6 +39,10 @@ function clearCachedSummary() {
   window.localStorage.removeItem(SUMMARY_CACHE_KEY)
 }
 
+function normalizeComputerAppName(name: string): string {
+  return normalizeAppName(name.replace(/\.exe$/i, ''))
+}
+
 function shouldUseCachedSummary(cached: SummaryData | null, incoming: SummaryData) {
   if (!cached) return false
   if (cached.date !== incoming.date) return false
@@ -59,9 +63,31 @@ function mergeSummaryWithAggregate(summary: SummaryData, aggregate: AggregatedUs
   const computerApps = aggregate.computer?.top_apps ?? []
   const phoneApps = aggregate.phone?.top_apps ?? []
 
-  for (const app of [...computerApps, ...phoneApps]) {
+  for (const app of computerApps) {
+    const rawName = app.name ?? (app as any).Name ?? ''
+    const appName = normalizeComputerAppName(rawName)
+    if (!appName) continue
+
+    const seconds = app.seconds ?? (app as any).duration ?? (app.hours ?? 0) * 3600
+    const category = app.category ?? 'other'
+    const current = topAppsMap.get(appName)
+    if (current) {
+      current.seconds += seconds
+      if (current.category === 'other' && category !== 'other') {
+        current.category = category
+      }
+    } else {
+      topAppsMap.set(appName, {
+        name: appName,
+        seconds,
+        category,
+      })
+    }
+  }
+
+  for (const app of phoneApps) {
     // Handle both 'name' and 'Name' field from backend
-    const appName = app.name ?? (app as any).Name ?? ''
+    const appName = normalizeAppName(app.name ?? (app as any).Name ?? '')
     if (!appName) continue
 
     const seconds = app.seconds ?? (app as any).duration ?? (app.hours ?? 0) * 3600
@@ -108,12 +134,12 @@ function mergeSummaryWithAggregate(summary: SummaryData, aggregate: AggregatedUs
     phone_hours: phoneTotal,
     phone_device_ids: aggregate.phone?.device_ids ?? summary.phone_device_ids ?? [],
     computer_top_apps: computerApps.map((app) => ({
-      name: (app as any).name ?? (app as any).Name ?? '',
+      name: normalizeComputerAppName((app as any).name ?? (app as any).Name ?? ''),
       duration: (app as any).hours ?? ((app as any).seconds ?? (app as any).duration ?? 0) / 3600,
       category: (app as any).category ?? 'other',
     })).filter(app => app.name),
     phone_top_apps: phoneApps.map((app) => ({
-      name: (app as any).name ?? (app as any).Name ?? '',
+      name: normalizeAppName((app as any).name ?? (app as any).Name ?? ''),
       duration: (app as any).hours ?? ((app as any).seconds ?? (app as any).duration ?? 0) / 3600,
       category: (app as any).category ?? 'other',
     })).filter(app => app.name),

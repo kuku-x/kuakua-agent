@@ -44,5 +44,4 @@
         android:layout_marginStart="16dp"
         tools:text="45.2%" />
 
-</LinearLayout></content>
-<parameter name="filePath">D:\project\kuakua-agent\phone_stats_sync\app\src\main\res\layout\item_pie_legend.xml
+</LinearLayout>

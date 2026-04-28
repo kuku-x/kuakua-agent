@@ -8,19 +8,25 @@
     <fragment
         android:id="@+id/navigation_home"
         android:name="com.kuakua.phonestats.HomeFragment"
-        android:label="首页"
+        android:label="Home"
         tools:layout="@layout/fragment_home" />
 
     <fragment
         android:id="@+id/navigation_history"
         android:name="com.kuakua.phonestats.HistoryFragment"
-        android:label="历史"
+        android:label="History"
         tools:layout="@layout/fragment_history" />
 
     <fragment
         android:id="@+id/navigation_settings"
         android:name="com.kuakua.phonestats.SettingsFragment"
-        android:label="设置"
+        android:label="Settings"
         tools:layout="@layout/fragment_settings" />
+
+    <fragment
+        android:id="@+id/monitoring_details"
+        android:name="com.kuakua.phonestats.MonitoringDetailsFragment"
+        android:label="Monitoring Details"
+        tools:layout="@layout/fragment_monitoring_details" />
 
 </navigation>

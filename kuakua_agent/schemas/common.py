@@ -14,6 +14,8 @@ class ApiResponse(BaseModel, Generic[T]):
 class ErrorPayload(BaseModel):
     code: str
     message: str
+    trace_id: str | None = None
+    retryable: bool = False
 
 
 class ErrorResponse(BaseModel):

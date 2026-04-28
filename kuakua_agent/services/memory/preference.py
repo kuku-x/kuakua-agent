@@ -15,6 +15,9 @@ class PreferenceStore:
         "do_not_disturb_end": "08:00",
         "max_praises_per_day": "10",
         "global_cooldown_minutes": "30",
+        "nightly_summary_enable": "true",
+        "nightly_summary_time": "21:30",
+        "nightly_summary_last_sent_date": "",
     }
 
     def __init__(self, db: Database | None = None):

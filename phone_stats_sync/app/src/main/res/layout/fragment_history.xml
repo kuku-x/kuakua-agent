@@ -113,7 +113,7 @@
                             android:layout_height="18dp"
                             android:layout_marginEnd="8dp"
                             android:src="@drawable/ic_check_circle"
-                            android:tint="@color/status_running"
+                            app:tint="@color/status_running"
                             tools:ignore="ContentDescription" />
 
                         <TextView
@@ -149,7 +149,7 @@
                             android:layout_height="18dp"
                             android:layout_marginEnd="8dp"
                             android:src="@drawable/ic_check_circle"
-                            android:tint="@color/status_running"
+                            app:tint="@color/status_running"
                             tools:ignore="ContentDescription" />
 
                         <TextView

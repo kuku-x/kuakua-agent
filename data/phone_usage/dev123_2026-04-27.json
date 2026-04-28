@@ -1,0 +1,18 @@
+[
+  {
+    "date": "2026-04-27",
+    "app_name": "微信",
+    "package_name": "com.tencent.mm",
+    "duration_seconds": 3600,
+    "last_used": "2026-04-27 10:30:00+00:00",
+    "event_count": 12
+  },
+  {
+    "date": "2026-04-27",
+    "app_name": "抖音",
+    "package_name": "com.ss.android.ugc.aweme",
+    "duration_seconds": 1800,
+    "last_used": "2026-04-27 09:00:00+00:00",
+    "event_count": 5
+  }
+]

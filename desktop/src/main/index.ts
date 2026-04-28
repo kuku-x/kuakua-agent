@@ -2,7 +2,13 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 
 let mainWindow: BrowserWindow | null = null
-const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL || 'http://localhost:5174'
+const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL || 'http://localhost:5175'
+
+// Some Windows environments may deny default cache directory access in dev mode.
+if (!app.isPackaged) {
+  const devUserDataPath = join(app.getPath('temp'), 'kuakua-agent-dev')
+  app.setPath('userData', devUserDataPath)
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({

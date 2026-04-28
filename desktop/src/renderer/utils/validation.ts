@@ -47,6 +47,19 @@ const APP_NAME_MAP: Record<string, string> = {
   git: 'Git',
   cursor: 'Cursor',
   arc: 'Arc Browser',
+  'com.xingin.xhs': '小红书',
+  'com.taobao.idlefish': '闲鱼',
+  'com.larus.nova': 'Nova Launcher',
+  'com.tencent.mm': '微信',
+  'com.tencent.mobileqq': 'QQ',
+  'com.ss.android.ugc.aweme': '抖音',
+  'com.eg.android.alipaygphone': '支付宝',
+  'tv.danmaku.bili': '哔哩哔哩',
+  'com.sankuai.meituan': '美团',
+  'com.xunmeng.pinduoduo': '拼多多',
+  'com.jingdong.app.mall': '京东',
+  'com.netease.cloudmusic': '网易云音乐',
+  'com.tencent.qqmusic': 'QQ音乐',
 }
 
 function asNumber(value: unknown, fallback = 0): number {
@@ -62,7 +75,7 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 }
 
-function normalizeAppName(value: string): string {
+export function normalizeAppName(value: string): string {
   const trimmed = value.trim()
   if (!trimmed) return ''
 
@@ -141,5 +154,7 @@ export function normalizeSettings(value: unknown): SettingsResponse {
     openweather_location: asString(item.openweather_location, 'Shanghai,CN'),
     fish_audio_api_key_set: Boolean(item.fish_audio_api_key_set),
     fish_audio_model: asString(item.fish_audio_model, 's2-pro'),
+    nightly_summary_enable: Boolean(item.nightly_summary_enable),
+    nightly_summary_time: asString(item.nightly_summary_time, '21:30'),
   }
 }

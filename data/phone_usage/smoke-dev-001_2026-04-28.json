@@ -1,0 +1,18 @@
+[
+  {
+    "date": "2026-04-28",
+    "app_name": "Code Editor",
+    "package_name": "com.example.editor",
+    "duration_seconds": 1200,
+    "last_used": "2026-04-28 05:05:26+00:00",
+    "event_count": 4
+  },
+  {
+    "date": "2026-04-28",
+    "app_name": "Web Browser",
+    "package_name": "com.example.browser",
+    "duration_seconds": 600,
+    "last_used": "2026-04-28 05:05:26+00:00",
+    "event_count": 2
+  }
+]

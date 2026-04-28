@@ -83,6 +83,8 @@ export interface SettingsPayload {
   openweather_location: string
   fish_audio_api_key?: string
   fish_audio_model: string
+  nightly_summary_enable: boolean
+  nightly_summary_time: string
 }
 
 export interface SettingsResponse {
@@ -92,6 +94,8 @@ export interface SettingsResponse {
   openweather_location: string
   fish_audio_api_key_set: boolean
   fish_audio_model: string
+  nightly_summary_enable: boolean
+  nightly_summary_time: string
 }
 
 export interface ActivityWatchStatus {

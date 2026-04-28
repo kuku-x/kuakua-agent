@@ -2,5 +2,4 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
     <solid android:color="#D49A76" />
-</shape></content>
-<parameter name="filePath">D:\project\kuakua-agent\phone_stats_sync\app\src\main\res\drawable/shape_circle.xml
+</shape>

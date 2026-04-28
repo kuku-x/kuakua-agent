@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from kuakua_agent.services.memory import (
@@ -7,6 +8,7 @@ from kuakua_agent.services.memory import (
     ProfileStore,
 )
 from kuakua_agent.services.brain.prompt import PraisePromptManager
+from kuakua_agent.services.usage.daily_summary_db import DailyUsageSummaryDb
 from kuakua_agent.services.weather import WeatherService
 
 
@@ -84,6 +86,7 @@ class ContextBuilder:
         scene_context = f"主要场景: {top_scene}"
         recent_highlight = self._build_recent_highlight(recent)
         reply_directive = self._build_reply_directive(user_message, recent_highlight)
+        recent_usage_summary = self._build_recent_usage_summary(days=7)
 
         user_prompt_text = self._prompt_mgr.build_user_prompt(
             user_message=user_message,
@@ -92,6 +95,7 @@ class ContextBuilder:
             recent_milestones=recent_str,
             praise_history_summary=history_summary,
             recent_highlight=recent_highlight,
+            recent_usage_summary=recent_usage_summary,
             reply_directive=reply_directive,
             weather=weather,
         )
@@ -122,6 +126,7 @@ class ContextBuilder:
         top_scene = profiles[0].scene if profiles else "通用陪伴"
         scene_context = f"主要场景: {top_scene}"
         recent_highlight = self._build_recent_highlight(unrecalled or self._ms.get_recent(hours=72, limit=10))
+        recent_usage_summary = self._build_recent_usage_summary(days=7)
 
         user_prompt_text = self._prompt_mgr.build_proactive_prompt(
             trigger_type=trigger_type,
@@ -131,6 +136,7 @@ class ContextBuilder:
             praise_history_summary=history_summary,
             env_context=env_context,
             recent_highlight=recent_highlight,
+            recent_usage_summary=recent_usage_summary,
             weather=weather,
         )
         messages = [
@@ -174,3 +180,38 @@ class ContextBuilder:
             "请优先结合最近行为亮点来夸，回复要元气、软萌、具体，"
             "并在结尾补一句鼓励，让用户更有动力继续保持。"
         )
+
+    def _build_recent_usage_summary(self, days: int = 7, max_chars: int = 900) -> str:
+        try:
+            items = DailyUsageSummaryDb().list_recent(days=days)
+        except Exception:
+            return "暂无使用节奏画像摘要"
+
+        if not items:
+            return "暂无使用节奏画像摘要"
+
+        lines: list[str] = []
+        for item in reversed(items):
+            try:
+                payload = json.loads(item.payload_json)
+                d = payload.get("date", item.date)
+                combined = payload.get("combined", {}) or {}
+                total_h = round((combined.get("total_seconds", 0) or 0) / 3600, 1)
+                work_h = round((combined.get("work_seconds", 0) or 0) / 3600, 1)
+                ent_h = round((combined.get("entertainment_seconds", 0) or 0) / 3600, 1)
+                phone_top = (payload.get("phone", {}) or {}).get("top_apps", []) or []
+                comp_top = (payload.get("computer", {}) or {}).get("top_apps", []) or []
+                top_names = []
+                for x in (comp_top[:2] + phone_top[:1]):
+                    name = x.get("name")
+                    if name:
+                        top_names.append(str(name))
+                top_str = ", ".join(top_names) if top_names else "N/A"
+                lines.append(f"- {d[5:]}：总活跃 {total_h}h（工作 {work_h}h / 娱乐 {ent_h}h）Top: {top_str}")
+            except Exception:
+                lines.append(f"- {item.date[5:]}：已生成日画像摘要")
+
+        text = "## 最近使用节奏画像（最近7天）\n" + "\n".join(lines)
+        if len(text) > max_chars:
+            return text[:max_chars] + "..."
+        return text

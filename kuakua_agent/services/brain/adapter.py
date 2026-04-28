@@ -1,7 +1,11 @@
 import codecs
+import time
 import httpx
 from kuakua_agent.config import settings
+from kuakua_agent.core.logging import get_logger
 from kuakua_agent.services.memory import PreferenceStore
+
+logger = get_logger(__name__)
 
 
 class ModelAdapter:
@@ -18,18 +22,31 @@ class ModelAdapter:
         }
 
     def complete(self, messages: list[dict], temperature: float = 0.8, max_tokens: int = 500) -> str:
+        started = time.perf_counter()
         payload = {
             "model": self.model_id,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
-        with httpx.Client(timeout=60.0) as client:
+        with httpx.Client(timeout=settings.llm_timeout_seconds) as client:
             response = client.post(
                 f"{self.base_url}/chat/completions",
                 headers=self._headers(),
                 json=payload,
             )
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        logger.info(
+            "llm_complete_finished",
+            extra={
+                "module_name": "llm",
+                "event": "complete",
+                "duration_ms": duration_ms,
+                "model_id": self.model_id,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            },
+        )
         if response.status_code != 200:
             raise Exception(f"API调用失败: {response.status_code} - {response.text}")
         result = response.json()
@@ -44,7 +61,7 @@ class ModelAdapter:
             "temperature": temperature,
             "stream": True,
         }
-        with httpx.Client(timeout=120.0) as client:
+        with httpx.Client(timeout=settings.llm_timeout_seconds * 2) as client:
             with client.stream("POST", f"{self.base_url}/chat/completions", headers=self._headers(), json=payload) as response:
                 if response.status_code != 200:
                     raise Exception(f"API调用失败: {response.status_code} - {response.text}")
@@ -65,18 +82,31 @@ class ModelAdapter:
                             continue
 
     async def complete_async(self, messages: list[dict], temperature: float = 0.8, max_tokens: int = 500) -> str:
+        started = time.perf_counter()
         payload = {
             "model": self.model_id,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=settings.llm_timeout_seconds) as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions",
                 headers=self._headers(),
                 json=payload,
             )
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        logger.info(
+            "llm_complete_async_finished",
+            extra={
+                "module_name": "llm",
+                "event": "complete_async",
+                "duration_ms": duration_ms,
+                "model_id": self.model_id,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            },
+        )
         if response.status_code != 200:
             raise Exception(f"API调用失败: {response.status_code} - {response.text}")
         result = response.json()
@@ -91,7 +121,7 @@ class ModelAdapter:
             "temperature": temperature,
             "stream": True,
         }
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=settings.llm_timeout_seconds * 2) as client:
             async with client.stream("POST", f"{self.base_url}/chat/completions", headers=self._headers(), json=payload) as response:
                 if response.status_code != 200:
                     raise Exception(f"API调用失败: {response.status_code} - {response.text}")

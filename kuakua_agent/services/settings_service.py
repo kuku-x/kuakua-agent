@@ -13,6 +13,8 @@ class SettingsService:
             "data_masking": "false",
             "openweather_location": "Shanghai,CN",
             "fish_audio_model": "s2-pro",
+            "nightly_summary_enable": "true",
+            "nightly_summary_time": "21:30",
         }
         for key, value in defaults.items():
             if self._pref.get(key) is None:
@@ -26,6 +28,8 @@ class SettingsService:
             openweather_location=self._pref.get("openweather_location") or "Shanghai,CN",
             fish_audio_api_key_set=bool(self._pref.get("fish_audio_api_key")),
             fish_audio_model=self._pref.get("fish_audio_model") or "s2-pro",
+            nightly_summary_enable=self._pref.get_bool("nightly_summary_enable"),
+            nightly_summary_time=self._pref.get("nightly_summary_time") or "21:30",
         )
 
     def update_settings(self, payload: SettingsPayload) -> SettingsResponse:
@@ -33,6 +37,8 @@ class SettingsService:
         self._pref.set("data_masking", str(payload.data_masking).lower())
         self._pref.set("openweather_location", payload.openweather_location.strip())
         self._pref.set("fish_audio_model", payload.fish_audio_model.strip())
+        self._pref.set("nightly_summary_enable", str(payload.nightly_summary_enable).lower())
+        self._pref.set("nightly_summary_time", payload.nightly_summary_time.strip())
 
         if payload.doubao_api_key:
             self._pref.set("model_api_key", payload.doubao_api_key.strip())

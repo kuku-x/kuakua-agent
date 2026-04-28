@@ -59,6 +59,61 @@ CREATE INDEX IF NOT EXISTS idx_milestones_occurred ON milestones(occurred_at);
 CREATE INDEX IF NOT EXISTS idx_praise_history_created ON praise_history(created_at);
 CREATE INDEX IF NOT EXISTS idx_feedback_praise ON feedback_logs(praise_id);
 CREATE INDEX IF NOT EXISTS idx_chat_history_chat_id ON chat_history(chat_id);
+
+-- ============ Daily usage (phone/computer) ============
+
+CREATE TABLE IF NOT EXISTS phone_usage_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id TEXT NOT NULL,
+    device_name TEXT NOT NULL,
+    usage_date TEXT NOT NULL,
+    package_name TEXT NOT NULL,
+    app_name TEXT NOT NULL,
+    duration_seconds INTEGER NOT NULL,
+    last_used TEXT,
+    event_count INTEGER NOT NULL,
+    received_at INTEGER NOT NULL,
+    batch_id TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_phone_events_device_date ON phone_usage_events(device_id, usage_date);
+CREATE INDEX IF NOT EXISTS idx_phone_events_received_at ON phone_usage_events(received_at);
+CREATE INDEX IF NOT EXISTS idx_phone_events_batch_id ON phone_usage_events(batch_id);
+
+CREATE TABLE IF NOT EXISTS phone_processed_events (
+    event_id TEXT PRIMARY KEY,
+    device_id TEXT NOT NULL,
+    usage_date TEXT NOT NULL,
+    processed_at INTEGER NOT NULL,
+    batch_id TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_phone_processed_device_date ON phone_processed_events(device_id, usage_date);
+CREATE INDEX IF NOT EXISTS idx_phone_processed_processed_at ON phone_processed_events(processed_at);
+
+CREATE TABLE IF NOT EXISTS phone_daily_usage (
+    device_id TEXT NOT NULL,
+    usage_date TEXT NOT NULL,
+    package_name TEXT NOT NULL,
+    app_name TEXT NOT NULL,
+    duration_seconds INTEGER NOT NULL,
+    last_used TEXT,
+    event_count INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (device_id, usage_date, package_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_phone_daily_date ON phone_daily_usage(usage_date);
+CREATE INDEX IF NOT EXISTS idx_phone_daily_device_date ON phone_daily_usage(device_id, usage_date);
+
+CREATE TABLE IF NOT EXISTS daily_usage_summary (
+    date TEXT PRIMARY KEY,
+    payload_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_usage_summary_updated_at ON daily_usage_summary(updated_at);
 """
 
 

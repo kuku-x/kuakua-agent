@@ -69,11 +69,6 @@ class UsageWidgetProvider : AppWidgetProvider() {
     }
 
     private fun getAppName(context: Context, packageName: String): String {
-        return try {
-            val appInfo = context.packageManager.getApplicationInfo(packageName, 0)
-            context.packageManager.getApplicationLabel(appInfo).toString()
-        } catch (_: Exception) {
-            packageName
-        }
+        return AppNameResolver.resolve(context, packageName)
     }
 }

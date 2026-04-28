@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
+import re
 
 from kuakua_agent.schemas.chat import ChatRequest, ChatResponse
 from kuakua_agent.schemas.common import ApiResponse
@@ -268,10 +269,13 @@ async def get_aggregated_usage(date: str, device_id: str | None = None):
     settings = settings_service.get_settings()
     aw_client = ActivityWatchClient(base_url=settings.aw_server_url)
 
-    # 获取日期范围（当天 00:00 到 23:59）
-    target_date = datetime.strptime(date, "%Y-%m-%d")
-    start = target_date.replace(hour=0, minute=0, second=0)
-    end = target_date.replace(hour=23, minute=59, second=59)
+    # 获取日期范围：以本地时区的当天 00:00-24:00，换算成 UTC 请求 ActivityWatch
+    day = datetime.strptime(date, "%Y-%m-%d").date()
+    local_tz = datetime.now().astimezone().tzinfo or timezone.utc
+    start_local = datetime.combine(day, datetime.min.time(), tzinfo=local_tz)
+    end_local = start_local + timedelta(days=1)
+    start = start_local.astimezone(timezone.utc)
+    end = end_local.astimezone(timezone.utc)
 
     # 1. 获取手机数据（简单累加）
     if device_id:
@@ -283,9 +287,32 @@ async def get_aggregated_usage(date: str, device_id: str | None = None):
         phone_devices = list(all_phone_entries.keys())
 
     phone_total_seconds = sum(e.duration_seconds for e in phone_entries)
+    phone_by_package: dict[str, dict] = {}
+    for entry in phone_entries:
+        package_name = (entry.package_name or "").strip()
+        app_name = (entry.app_name or "").strip() or package_name or "Unknown"
+        key = package_name or app_name
+        current = phone_by_package.get(key)
+        if current:
+            current["seconds"] += int(entry.duration_seconds)
+            # Prefer Chinese/wechat-friendly display name if available.
+            if current["name"].lower() in {"wechat", "weixin"} and app_name:
+                current["name"] = app_name
+        else:
+            phone_by_package[key] = {
+                "name": app_name,
+                "seconds": int(entry.duration_seconds),
+                "category": _guess_category(app_name),
+            }
     phone_top_apps = [
-        {"name": e.app_name, "duration": e.duration_seconds, "seconds": e.duration_seconds, "hours": round(e.duration_seconds / 3600, 1), "category": _guess_category(e.app_name)}
-        for e in sorted(phone_entries, key=lambda x: x.duration_seconds, reverse=True)[:10]
+        {
+            "name": item["name"],
+            "duration": item["seconds"],
+            "seconds": item["seconds"],
+            "hours": round(item["seconds"] / 3600, 1),
+            "category": item["category"],
+        }
+        for item in sorted(phone_by_package.values(), key=lambda x: x["seconds"], reverse=True)[:10]
     ]
 
     # 2. 获取电脑数据（从 ActivityWatch）
@@ -330,18 +357,27 @@ def _get_computer_usage_from_aw(aw_client, start: datetime, end: datetime) -> di
     if not window_bucket:
         return {"total_seconds": 0, "top_apps": [], "work_hours": 0, "entertainment_hours": 0}
 
-    events = aw_client.get_events(window_bucket, start, end, limit=1000)
+    events = aw_client.get_events(window_bucket, start, end, limit=5000)
 
     # 按 App 分组统计时长
-    app_times: dict[str, int] = {}
+    app_times: dict[str, float] = {}
     for event in events:
+        started_at = _parse_aw_dt(event.get("timestamp"))
+        duration = max(float(event.get("duration", 0) or 0), 0.0)
+        if started_at is None or duration <= 0:
+            continue
+
+        ended_at = started_at + timedelta(seconds=duration)
+        overlap_seconds = _overlap_seconds(started_at, ended_at, start, end)
+        if overlap_seconds <= 0:
+            continue
+
         data = event.get("data", {})
-        app = data.get("app", data.get("title", "Unknown"))
-        duration = event.get("duration", 0)
+        app = _normalize_computer_app_name(data.get("app", data.get("title", "Unknown")))
         if app in app_times:
-            app_times[app] += duration
+            app_times[app] += overlap_seconds
         else:
-            app_times[app] = duration
+            app_times[app] = overlap_seconds
 
     total_seconds = sum(app_times.values())
     top_apps = [
@@ -359,6 +395,24 @@ def _get_computer_usage_from_aw(aw_client, start: datetime, end: datetime) -> di
         "work_hours": round(work_hours, 1),
         "entertainment_hours": round(entertainment_hours, 1)
     }
+
+
+def _parse_aw_dt(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _overlap_seconds(start: datetime, end: datetime, range_start: datetime, range_end: datetime) -> float:
+    overlap_start = max(start, range_start)
+    overlap_end = min(end, range_end)
+    return max((overlap_end - overlap_start).total_seconds(), 0.0)
 
 
 def _guess_category(app_name: str) -> str:
@@ -380,3 +434,20 @@ def _guess_category(app_name: str) -> str:
         if kw in app_lower:
             return "entertainment"
     return "other"
+
+
+def _normalize_computer_app_name(app_name: str) -> str:
+    """Normalize noisy process names to user-friendly app names."""
+    if not app_name:
+        return "Unknown"
+
+    value = str(app_name).strip()
+    lowered = value.lower()
+
+    # Cursor helper process names like CursorLoginUp812 -> Cursor
+    if re.fullmatch(r"cursorloginup\d+", lowered):
+        return "Cursor"
+
+    if lowered.endswith(".exe"):
+        value = value[:-4]
+    return value or "Unknown"
