@@ -77,6 +77,9 @@ PRAISE_PROACTIVE_TEMPLATE = """## 触发信息
 ## 当前环境上下文
 {env_context}
 
+## 历史相似成就（向量检索）
+{vector_context}
+
 请基于以上信息，主动给用户一段温暖、自然、具体的夸夸，控制在 80 字以内。"""
 
 
@@ -122,6 +125,7 @@ class PraisePromptManager:
         recent_highlight: str,
         recent_usage_summary: str,
         weather: str = "未知",
+        vector_context: str = "",
     ) -> str:
         return PRAISE_PROACTIVE_TEMPLATE.format(
             trigger_type=trigger_type,
@@ -133,6 +137,7 @@ class PraisePromptManager:
             recent_highlight=recent_highlight,
             recent_usage_summary=recent_usage_summary,
             weather=weather,
+            vector_context=vector_context or "暂无历史相似成就",
         )
 
     def get_system_prompt(self) -> str:

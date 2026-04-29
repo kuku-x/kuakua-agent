@@ -182,7 +182,7 @@ class ContextBuilder:
             weather = self._weather.get_weather_summary()
 
         time_of_day = get_time_of_day()
-        unrecalled = await self._ms.get_unrecalled(hours=72, limit=5)
+        unrecalled = await self._ms.get_recent(hours=72, limit=10)
         unrecalled_str = (
             "\n".join(f"- [{m.event_type}] {m.title}: {m.description or ''}" for m in unrecalled)
             or "暂无新鲜行为里程碑"
@@ -196,6 +196,9 @@ class ContextBuilder:
         recent_highlight = await self._build_recent_highlight(_recent_milestones)
         recent_usage_summary = self._build_recent_usage_summary(days=7)
 
+        # 构建向量检索上下文（跨时间上下文联想）
+        vector_context = await self._build_vector_context(unrecalled)
+
         user_prompt_text = self._prompt_mgr.build_proactive_prompt(
             trigger_type=trigger_type,
             time_of_day=time_of_day,
@@ -206,12 +209,41 @@ class ContextBuilder:
             recent_highlight=recent_highlight,
             recent_usage_summary=recent_usage_summary,
             weather=weather,
+            vector_context=vector_context,
         )
         messages = [
             {"role": "system", "content": self._prompt_mgr.get_system_prompt()},
             {"role": "user", "content": user_prompt_text},
         ]
         return messages, user_prompt_text
+
+    async def _build_vector_context(self, milestones: list) -> str:
+        """构建向量检索上下文，检索历史相似成就"""
+        if not milestones:
+            return ""
+        try:
+            from kuakua_agent.services.ai_engine.vector_store import VectorStoreManager
+            vector_store = VectorStoreManager()
+            # 使用最近的 milestone 构建索引
+            milestone_dicts = [
+                {
+                    "id": m.id,
+                    "occurred_at": m.occurred_at.isoformat() if hasattr(m.occurred_at, 'isoformat') else str(m.occurred_at),
+                    "event_type": m.event_type,
+                    "description": m.description or "",
+                }
+                for m in milestones[:20]  # 限制数量
+            ]
+            if milestone_dicts:
+                vector_store.build_milestone_index(milestone_dicts)
+                # 使用最新的 milestone 检索相似成就
+                current = milestone_dicts[0]
+                recent = milestone_dicts[1:6]  # 最近5个作为 recent
+                return vector_store.build_praise_context(current, recent)
+        except Exception:
+            # 向量检索失败时静默降级
+            pass
+        return ""
 
     async def _build_recent_highlight(self, milestones: list) -> str:
         if not milestones:
