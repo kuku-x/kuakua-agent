@@ -6,7 +6,7 @@ AI 夸夸 Agent 桌面软件 - 基于 ActivityWatch 的电脑行为监控与 AI 
 
 ## 技术架构
 
-- **后端**: Python FastAPI (`backend/`)
+- **后端**: Python FastAPI (`kuakua_agent/`)
 - **桌面应用**: Electron + Vue 3 + TypeScript (`desktop/`)
 - **外部依赖**: ActivityWatch (`deps/activitywatch/`)
 - **语音合成**: Kokoro-82M 本地离线 TTS（`pip install kokoro`）
@@ -18,12 +18,13 @@ kuakua-agent/
 ├── CLAUDE.md              # 本文件
 ├── pyproject.toml         # Python 项目配置
 │
-├── backend/               # Python FastAPI 后端
+├── kuakua_agent/           # Python FastAPI 后端
 │   ├── main.py
 │   ├── config.py
 │   ├── api/               # API 路由与错误处理
+│   ├── core/              # 核心基础设施（logging, tracing, errors）
 │   ├── schemas/           # Pydantic 数据模型
-│   └── services/          # 业务逻辑服务
+│   └── services/          # 业务逻辑服务（四大域：ai_engine, storage_layer, monitor, notification）
 │
 ├── desktop/               # Electron 桌面应用
 │   ├── src/
@@ -31,14 +32,19 @@ kuakua-agent/
 │   │   ├── preload/      # 预加载脚本
 │   │   └── renderer/     # Vue 渲染进程
 │   │       ├── api/       # API 调用
-│   │       ├── components/# UI 组件
+│   │       ├── components/# UI 组件（base/, layout/, settings/, business/, widgets/）
+│   │       ├── constants/  # 常量配置
 │   │       ├── hooks/     # Vue Hooks
 │   │       ├── router/    # 路由配置
 │   │       ├── store/     # 状态管理
+│   │       ├── styles/    # 全局样式
 │   │       ├── types/     # TypeScript 类型
 │   │       ├── utils/     # 工具函数
 │   │       └── views/     # 页面视图
 │   └── package.json
+│
+├── scripts/                # 工具脚本
+├── tests/                  # 测试代码
 │
 ├── deps/                  # 外部依赖
 │   └── activitywatch/     # ActivityWatch 行为监控
@@ -53,7 +59,7 @@ kuakua-agent/
 ### 后端开发 (Python)
 - 使用 FastAPI 框架
 - 数据模型使用 Pydantic schemas
-- 遵循 `backend/` 模块划分
+- 遵循 `kuakua_agent/` 模块划分
 
 ### 桌面应用开发 (Electron/Vue)
 - 使用 electron-vite 构建
