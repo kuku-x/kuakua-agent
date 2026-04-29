@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from kuakua_agent.services.scheduler.cooldown import CooldownManager
+from kuakua_agent.services.monitor.scheduler.cooldown import CooldownManager
 
 
 class MockPrefStore:
@@ -31,7 +31,7 @@ async def test_dnd_overnight():
     })
 
     # Test at 23:00 (inside DND window 22:00-08:00)
-    with patch("kuakua_agent.services.scheduler.cooldown.datetime") as mock_dt:
+    with patch("kuakua_agent.services.monitor.scheduler.cooldown.datetime") as mock_dt:
         mock_dt.now.return_value = datetime(2026, 4, 27, 23, 0)
         mock_dt.strptime = datetime.strptime
         cm = CooldownManager(pref_store=pref)
@@ -39,7 +39,7 @@ async def test_dnd_overnight():
         assert result is True
 
     # Test at 10:00 (outside DND window)
-    with patch("kuakua_agent.services.scheduler.cooldown.datetime") as mock_dt:
+    with patch("kuakua_agent.services.monitor.scheduler.cooldown.datetime") as mock_dt:
         mock_dt.now.return_value = datetime(2026, 4, 27, 10, 0)
         mock_dt.strptime = datetime.strptime
         cm = CooldownManager(pref_store=pref)

@@ -2,9 +2,9 @@ import pytest
 import pytest_asyncio
 import tempfile
 import os
-from kuakua_agent.services.memory.database import Database
-from kuakua_agent.services.memory.preference import PreferenceStore
-from kuakua_agent.services.output.tts import KokoroTTS
+from kuakua_agent.services.storage_layer.database import Database
+from kuakua_agent.services.storage_layer.preference import PreferenceStore
+from kuakua_agent.services.notification.tts import KokoroTTS
 
 
 @pytest_asyncio.fixture

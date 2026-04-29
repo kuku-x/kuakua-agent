@@ -9,7 +9,7 @@ from ..schemas.phone_usage import (
     PhoneSyncRequest,
     PhoneSyncResponse,
 )
-from ..services.phone_usage_service import get_phone_usage_service
+from ..services.monitor.phone_usage_service import get_phone_usage_service
 from ..utils.atomic_write import write_json_atomic
 
 router = APIRouter(prefix="/phone", tags=["phone"])

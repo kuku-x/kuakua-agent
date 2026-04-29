@@ -2,8 +2,8 @@ import pytest
 import pytest_asyncio
 import tempfile
 import os
-from kuakua_agent.services.memory.database import Database
-from kuakua_agent.services.memory.preference import PreferenceStore
+from kuakua_agent.services.storage_layer.database import Database
+from kuakua_agent.services.storage_layer.preference import PreferenceStore
 
 @pytest_asyncio.fixture
 async def temp_db():

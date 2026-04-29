@@ -1,9 +1,9 @@
 import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
-from kuakua_agent.services.memory.models import Milestone, PraiseHistory
+from kuakua_agent.services.storage_layer.models import Milestone, PraiseHistory
 from kuakua_agent.config import settings
-from kuakua_agent.services.brain.context import ContextBuilder, deduplicate_milestones, summarize_praise_history
+from kuakua_agent.services.ai_engine.context import ContextBuilder, deduplicate_milestones, summarize_praise_history
 
 
 def test_deduplicate_milestones_same_hour():

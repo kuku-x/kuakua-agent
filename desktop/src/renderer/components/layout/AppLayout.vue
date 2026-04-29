@@ -82,7 +82,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getLatestNightlySummary, markNightlySummaryRead } from '@/api'
-import GlobalError from '@/components/GlobalError.vue'
+import GlobalError from '@/components/widgets/GlobalError.vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import SettingsPanel from '@/components/settings/SettingsPanel.vue'
 import SettingsTrigger from '@/components/settings/SettingsTrigger.vue'

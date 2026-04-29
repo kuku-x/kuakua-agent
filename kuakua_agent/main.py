@@ -1,8 +1,8 @@
 from kuakua_agent.api.app import create_app
-from kuakua_agent.services.memory import get_database
-from kuakua_agent.services.scheduler import PraiseScheduler
-from kuakua_agent.services.activitywatch import ActivityWatchScheduler
-from kuakua_agent.services.nightly_summary_scheduler import NightlySummaryScheduler
+from kuakua_agent.services.storage_layer import get_database
+from kuakua_agent.services.monitor.scheduler import PraiseScheduler
+from kuakua_agent.services.monitor.activitywatch import ActivityWatchScheduler
+from kuakua_agent.services.monitor.nightly_summary_scheduler import NightlySummaryScheduler
 
 app = create_app()
 

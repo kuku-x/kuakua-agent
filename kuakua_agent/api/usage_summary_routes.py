@@ -4,9 +4,9 @@ from fastapi import APIRouter, HTTPException
 
 from kuakua_agent.schemas.common import ApiResponse
 from kuakua_agent.schemas.nightly_summary import NightlySummaryResponse
-from kuakua_agent.services.memory import PreferenceStore
-from kuakua_agent.services.usage.daily_summarizer import DailyUsageSummarizer
-from kuakua_agent.services.usage.daily_summary_db import DailyUsageSummaryDb
+from kuakua_agent.services.storage_layer import PreferenceStore
+from kuakua_agent.services.user_behavior.daily_summarizer import DailyUsageSummarizer
+from kuakua_agent.services.user_behavior.daily_summary_db import DailyUsageSummaryDb
 
 usage_router = APIRouter(prefix="/usage", tags=["usage"])
 jobs_router = APIRouter(prefix="/jobs", tags=["usage-jobs"])

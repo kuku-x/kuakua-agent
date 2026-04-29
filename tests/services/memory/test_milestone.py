@@ -3,8 +3,8 @@ import pytest_asyncio
 import tempfile
 import os
 from datetime import datetime
-from kuakua_agent.services.memory.database import Database
-from kuakua_agent.services.memory.milestone import MilestoneStore
+from kuakua_agent.services.storage_layer.database import Database
+from kuakua_agent.services.storage_layer.milestone import MilestoneStore
 
 @pytest_asyncio.fixture
 async def temp_db():

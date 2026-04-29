@@ -3,10 +3,10 @@ from __future__ import annotations
 import importlib.util
 
 from kuakua_agent.config import settings
-from kuakua_agent.services.activitywatch import ActivityWatchClient
+from kuakua_agent.services.monitor.activitywatch import ActivityWatchClient
 from kuakua_agent.services.integrations.base import IntegrationHealth, IntegrationProvider
-from kuakua_agent.services.memory import PreferenceStore
-from kuakua_agent.services.weather import WeatherService
+from kuakua_agent.services.storage_layer import PreferenceStore
+from kuakua_agent.services.notification.weather import WeatherService
 
 
 class ActivityWatchIntegration(IntegrationProvider):

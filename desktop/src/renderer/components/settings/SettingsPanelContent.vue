@@ -493,8 +493,29 @@ async function saveSettings() {
   }
 }
 
-function clearApiKey() {
-  apiKeyInput.value = ''
+async function clearApiKey() {
+  saving.value = true
+  saveMessage.value = ''
+
+  try {
+    const payload: SettingsPayload = {
+      aw_server_url: settings.value.aw_server_url,
+      data_masking: settings.value.data_masking,
+      doubao_api_key: '',
+    }
+
+    const response = await updateSettings(payload)
+    settings.value = normalizeSettings(response.data.data)
+    apiKeySet.value = settings.value.doubao_api_key_set
+    apiKeyInput.value = ''
+    saveSuccess.value = true
+    saveMessage.value = 'API Key 已清空'
+  } catch (error: unknown) {
+    saveSuccess.value = false
+    saveMessage.value = handleApiError(error)
+  } finally {
+    saving.value = false
+  }
 }
 
 function selectModelPath() {

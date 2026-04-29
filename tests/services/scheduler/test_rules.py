@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from kuakua_agent.services.scheduler.rules import TriggerRule, TimeCondition, BehaviorCondition
+from kuakua_agent.services.monitor.scheduler.rules import TriggerRule, TimeCondition, BehaviorCondition
 
 
 def test_time_range_weekday():

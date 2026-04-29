@@ -14,12 +14,12 @@ from kuakua_agent.schemas.settings import (
     SettingsResponse,
 )
 from kuakua_agent.schemas.summary import SummaryResponse
-from kuakua_agent.services.activitywatch import ActivityWatchClient
-from kuakua_agent.services.chat_service import ChatService
+from kuakua_agent.services.monitor.activitywatch import ActivityWatchClient
+from kuakua_agent.services.ai_engine.chat_service import ChatService
 from kuakua_agent.services.integrations import get_integration_registry
-from kuakua_agent.services.memory import MilestoneStore, PraiseHistoryStore, PreferenceStore, ProfileStore, FeedbackStore
+from kuakua_agent.services.storage_layer import MilestoneStore, PraiseHistoryStore, PreferenceStore, ProfileStore, FeedbackStore
 from kuakua_agent.services.settings_service import get_settings_service
-from kuakua_agent.services.summary_service import SummaryService
+from kuakua_agent.services.monitor.summary_service import SummaryService
 
 router = APIRouter()
 summary_service = SummaryService()
@@ -81,7 +81,7 @@ async def get_summary(date: str) -> ApiResponse[SummaryResponse]:
 
 @router.get("/nightly-summary/{date}", response_model=ApiResponse[dict])
 async def get_nightly_summary(date: str) -> ApiResponse[dict]:
-    from kuakua_agent.services.brain.nightly_summary_generator import NightlySummaryGenerator
+    from kuakua_agent.services.ai_engine.nightly_summary_generator import NightlySummaryGenerator
     generator = NightlySummaryGenerator()
     content = generator.generate(date)
     return ApiResponse(data={"date": date, "summary": content})
@@ -89,7 +89,7 @@ async def get_nightly_summary(date: str) -> ApiResponse[dict]:
 
 @router.post("/nightly-summary/{date}", response_model=ApiResponse[dict])
 async def regenerate_nightly_summary(date: str) -> ApiResponse[dict]:
-    from kuakua_agent.services.brain.nightly_summary_generator import NightlySummaryGenerator
+    from kuakua_agent.services.ai_engine.nightly_summary_generator import NightlySummaryGenerator
     generator = NightlySummaryGenerator()
     content = generator.generate(date)
     return ApiResponse(data={"date": date, "summary": content})
@@ -180,10 +180,8 @@ async def check_activitywatch(payload: ActivityWatchCheckPayload) -> ApiResponse
 
 @router.delete("/settings/data", response_model=ApiResponse[dict[str, bool]])
 async def delete_all_data() -> ApiResponse[dict[str, bool]]:
-    raise HTTPException(
-        status_code=501,
-        detail="数据删除功能暂未实现，请稍后再试。",
-    )
+    await settings_service.delete_all_data_async()
+    return ApiResponse(data={"deleted": True})
 
 
 # GET /settings/praise
@@ -191,15 +189,15 @@ async def delete_all_data() -> ApiResponse[dict[str, bool]]:
 async def get_praise_config() -> ApiResponse[PraiseConfig]:
     pref = PreferenceStore()
     return ApiResponse(data=PraiseConfig(
-        praise_auto_enable=pref.get_bool("praise_auto_enable"),
-        tts_enable=pref.get_bool("tts_enable"),
-        kokoro_voice=pref.get("kokoro_voice") or pref.get("tts_voice") or "zf_001",
-        kokoro_model_path=pref.get("kokoro_model_path") or "./ckpts/kokoro-v1.1",
-        tts_speed=pref.get_float("tts_speed", 1.0),
-        do_not_disturb_start=pref.get("do_not_disturb_start") or "22:00",
-        do_not_disturb_end=pref.get("do_not_disturb_end") or "08:00",
-        nightly_summary_enable=pref.get_bool("nightly_summary_enable"),
-        nightly_summary_time=pref.get("nightly_summary_time") or "21:30",
+        praise_auto_enable=await pref.get_bool("praise_auto_enable"),
+        tts_enable=await pref.get_bool("tts_enable"),
+        kokoro_voice=await pref.get("kokoro_voice") or await pref.get("tts_voice") or "zf_001",
+        kokoro_model_path=await pref.get("kokoro_model_path") or "./ckpts/kokoro-v1.1",
+        tts_speed=await pref.get_float("tts_speed", 1.0),
+        do_not_disturb_start=await pref.get("do_not_disturb_start") or "22:00",
+        do_not_disturb_end=await pref.get("do_not_disturb_end") or "08:00",
+        nightly_summary_enable=await pref.get_bool("nightly_summary_enable"),
+        nightly_summary_time=await pref.get("nightly_summary_time") or "21:30",
     ))
 
 
@@ -207,17 +205,17 @@ async def get_praise_config() -> ApiResponse[PraiseConfig]:
 @router.put("/settings/praise", response_model=ApiResponse[PraiseConfig])
 async def update_praise_config(payload: PraiseConfig) -> ApiResponse[PraiseConfig]:
     pref = PreferenceStore()
-    pref.set("praise_auto_enable", str(payload.praise_auto_enable).lower())
-    pref.set("tts_enable", str(payload.tts_enable).lower())
-    pref.set("kokoro_voice", payload.kokoro_voice)
+    await pref.set("praise_auto_enable", str(payload.praise_auto_enable).lower())
+    await pref.set("tts_enable", str(payload.tts_enable).lower())
+    await pref.set("kokoro_voice", payload.kokoro_voice)
     # Keep the legacy field in sync until older clients are fully migrated.
-    pref.set("tts_voice", payload.kokoro_voice)
-    pref.set("kokoro_model_path", payload.kokoro_model_path.strip())
-    pref.set("tts_speed", str(payload.tts_speed))
-    pref.set("do_not_disturb_start", payload.do_not_disturb_start)
-    pref.set("do_not_disturb_end", payload.do_not_disturb_end)
-    pref.set("nightly_summary_enable", str(payload.nightly_summary_enable).lower())
-    pref.set("nightly_summary_time", payload.nightly_summary_time)
+    await pref.set("tts_voice", payload.kokoro_voice)
+    await pref.set("kokoro_model_path", payload.kokoro_model_path.strip())
+    await pref.set("tts_speed", str(payload.tts_speed))
+    await pref.set("do_not_disturb_start", payload.do_not_disturb_start)
+    await pref.set("do_not_disturb_end", payload.do_not_disturb_end)
+    await pref.set("nightly_summary_enable", str(payload.nightly_summary_enable).lower())
+    await pref.set("nightly_summary_time", payload.nightly_summary_time)
     return ApiResponse(data=payload)
 
 
