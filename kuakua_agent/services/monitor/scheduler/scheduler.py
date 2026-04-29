@@ -5,6 +5,7 @@ from kuakua_agent.services.monitor.scheduler.events import SchedulerEvent, Trigg
 from kuakua_agent.services.monitor.scheduler.rules import TriggerRule, DEFAULT_RULES
 from kuakua_agent.services.monitor.scheduler.cooldown import CooldownManager
 from kuakua_agent.services.ai_engine import ContextBuilder, ModelAdapter
+from kuakua_agent.services.ai_engine.graph import run_praise_workflow
 from kuakua_agent.services.storage_layer import MilestoneStore, PraiseHistoryStore
 from kuakua_agent.services.notification import KokoroTTS, OutputManager, SystemNotifier
 from kuakua_agent.services.notification.weather import WeatherService
@@ -54,14 +55,17 @@ class PraiseScheduler:
             logger.info("触发被冷却拦截")
             return None
 
-        messages, _ = await self._context_builder.build_proactive_context(
-            trigger_type=event.trigger_type.value,
-            env_context=str(event.data or {}),
-            weather=self._weather.get_weather_summary(),
-        )
+        # Build milestone data for the workflow
+        milestone = {
+            "event_type": event.trigger_type.value,
+            "data": event.data,
+        }
 
         try:
-            praise_content = await self._model.complete_async(messages)
+            # Run the LangGraph workflow instead of direct model call
+            praise_content = await run_praise_workflow(milestone)
+            if not praise_content:
+                raise ValueError("Workflow returned empty praise")
         except Exception as e:
             logger.error(f"生成夸夸失败: {e}")
             return None
