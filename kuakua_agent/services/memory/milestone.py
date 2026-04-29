@@ -29,7 +29,7 @@ class MilestoneStore:
             return Milestone.from_row(row)
 
     async def get_recent(self, hours: int = 24, limit: int = 10) -> list[Milestone]:
-        cutoff = datetime.now() - timedelta(hours=hours)
+        cutoff = datetime.utcnow() - timedelta(hours=hours)
         async with self._db._get_conn() as conn:
             async with conn.execute(
                 "SELECT * FROM milestones WHERE occurred_at >= ? ORDER BY occurred_at DESC LIMIT ?",
@@ -39,7 +39,7 @@ class MilestoneStore:
             return [Milestone.from_row(r) for r in rows]
 
     async def get_unrecalled(self, hours: int = 72, limit: int = 5) -> list[Milestone]:
-        cutoff = datetime.now() - timedelta(hours=hours)
+        cutoff = datetime.utcnow() - timedelta(hours=hours)
         async with self._db._get_conn() as conn:
             async with conn.execute(
                 "SELECT * FROM milestones WHERE is_recalled = FALSE AND occurred_at >= ? ORDER BY occurred_at DESC LIMIT ?",

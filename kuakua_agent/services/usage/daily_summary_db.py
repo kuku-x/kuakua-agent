@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass
 
@@ -18,12 +19,13 @@ class DailyUsageSummaryDb:
     def __init__(self, db: Database | None = None) -> None:
         self._db = db or Database()
 
-    def get(self, date: str) -> DailyUsageSummary | None:
-        with self._db._get_conn() as conn:
-            row = conn.execute(
+    async def _async_get(self, date: str) -> DailyUsageSummary | None:
+        async with self._db._get_conn() as conn:
+            cursor = await conn.execute(
                 "SELECT date, payload_json, created_at, updated_at FROM daily_usage_summary WHERE date = ?",
                 (date,),
-            ).fetchone()
+            )
+            row = await cursor.fetchone()
         if not row:
             return None
         return DailyUsageSummary(
@@ -33,10 +35,22 @@ class DailyUsageSummaryDb:
             updated_at=int(row["updated_at"]),
         )
 
-    def upsert(self, *, date: str, payload_json: str, now_ts: int | None = None) -> None:
+    def get(self, date: str) -> DailyUsageSummary | None:
+        """Synchronous get - uses internal async method with asyncio.run()."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self._async_get(date))
+        else:
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self._async_get(date))
+                return future.result()
+
+    async def _async_upsert(self, *, date: str, payload_json: str, now_ts: int | None = None) -> None:
         ts = int(now_ts or time.time())
-        with self._db._get_conn() as conn:
-            conn.execute(
+        async with self._db._get_conn() as conn:
+            await conn.execute(
                 """
                 INSERT INTO daily_usage_summary (date, payload_json, created_at, updated_at)
                 VALUES (?, ?, ?, ?)
@@ -46,12 +60,26 @@ class DailyUsageSummaryDb:
                 """,
                 (date, payload_json, ts, ts),
             )
-            conn.commit()
+            await conn.commit()
 
-    def list_recent(self, *, days: int = 14) -> list[DailyUsageSummary]:
+    def upsert(self, *, date: str, payload_json: str, now_ts: int | None = None) -> None:
+        """Synchronous upsert - uses internal async method with asyncio.run()."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self._async_upsert(date=date, payload_json=payload_json, now_ts=now_ts))
+        else:
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run, self._async_upsert(date=date, payload_json=payload_json, now_ts=now_ts)
+                )
+                return future.result()
+
+    async def _async_list_recent(self, *, days: int = 14) -> list[DailyUsageSummary]:
         limit = max(1, min(int(days), 366))
-        with self._db._get_conn() as conn:
-            rows = conn.execute(
+        async with self._db._get_conn() as conn:
+            cursor = await conn.execute(
                 """
                 SELECT date, payload_json, created_at, updated_at
                 FROM daily_usage_summary
@@ -59,7 +87,8 @@ class DailyUsageSummaryDb:
                 LIMIT ?
                 """,
                 (limit,),
-            ).fetchall()
+            )
+            rows = await cursor.fetchall()
         return [
             DailyUsageSummary(
                 date=row["date"],
@@ -70,3 +99,24 @@ class DailyUsageSummaryDb:
             for row in rows
         ]
 
+    def list_recent(self, *, days: int = 14) -> list[DailyUsageSummary]:
+        """Synchronous list_recent - uses internal async method with asyncio.run()."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self._async_list_recent(days=days))
+        else:
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self._async_list_recent(days=days))
+                return future.result()
+
+    # Async versions for use in async contexts
+    async def get_async(self, date: str) -> DailyUsageSummary | None:
+        return await self._async_get(date)
+
+    async def upsert_async(self, *, date: str, payload_json: str, now_ts: int | None = None) -> None:
+        return await self._async_upsert(date=date, payload_json=payload_json, now_ts=now_ts)
+
+    async def list_recent_async(self, *, days: int = 14) -> list[DailyUsageSummary]:
+        return await self._async_list_recent(days=days)

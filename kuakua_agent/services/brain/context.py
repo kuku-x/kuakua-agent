@@ -116,7 +116,7 @@ class ContextBuilder:
             "请直接、简洁、准确回答，不要转成夸夸话术，不要结合行为数据。"
         )
 
-    def build_user_context(
+    async def build_user_context(
         self,
         user_message: str,
         weather: str = "未知",
@@ -140,18 +140,18 @@ class ContextBuilder:
             weather = self._weather.get_weather_summary()
 
         time_of_day = get_time_of_day()
-        recent = self._ms.get_recent(hours=72, limit=10)
+        recent = await self._ms.get_recent(hours=72, limit=10)
         recent = deduplicate_milestones(recent)
         recent_str = (
             "\n".join(f"- [{m.event_type}] {m.title}: {m.description or ''}" for m in recent)
             or "暂无近期行为里程碑"
         )
-        history = self._hs.get_recent(limit=20)
+        history = await self._hs.get_recent(limit=20)
         history_summary = summarize_praise_history(history)
-        profiles = self._profile.get_all()
+        profiles = await self._profile.get_all()
         top_scene = profiles[0].scene if profiles else "通用陪伴"
         scene_context = f"主要场景: {top_scene}"
-        recent_highlight = self._build_recent_highlight(recent)
+        recent_highlight = await self._build_recent_highlight(recent)
         reply_directive = self._build_reply_directive(user_message, recent_highlight)
         recent_usage_summary = self._build_recent_usage_summary(days=7)
 
@@ -172,7 +172,7 @@ class ContextBuilder:
         ]
         return messages, user_prompt_text
 
-    def build_proactive_context(
+    async def build_proactive_context(
         self,
         trigger_type: str,
         env_context: str = "",
@@ -182,17 +182,18 @@ class ContextBuilder:
             weather = self._weather.get_weather_summary()
 
         time_of_day = get_time_of_day()
-        unrecalled = self._ms.get_unrecalled(hours=72, limit=5)
+        unrecalled = await self._ms.get_unrecalled(hours=72, limit=5)
         unrecalled_str = (
             "\n".join(f"- [{m.event_type}] {m.title}: {m.description or ''}" for m in unrecalled)
             or "暂无新鲜行为里程碑"
         )
-        history = self._hs.get_recent(limit=20)
+        history = await self._hs.get_recent(limit=20)
         history_summary = summarize_praise_history(history)
-        profiles = self._profile.get_all()
+        profiles = await self._profile.get_all()
         top_scene = profiles[0].scene if profiles else "通用陪伴"
         scene_context = f"主要场景: {top_scene}"
-        recent_highlight = self._build_recent_highlight(unrecalled or self._ms.get_recent(hours=72, limit=10))
+        _recent_milestones = unrecalled if unrecalled else await self._ms.get_recent(hours=72, limit=10)
+        recent_highlight = await self._build_recent_highlight(_recent_milestones)
         recent_usage_summary = self._build_recent_usage_summary(days=7)
 
         user_prompt_text = self._prompt_mgr.build_proactive_prompt(
@@ -212,7 +213,7 @@ class ContextBuilder:
         ]
         return messages, user_prompt_text
 
-    def _build_recent_highlight(self, milestones: list) -> str:
+    async def _build_recent_highlight(self, milestones: list) -> str:
         if not milestones:
             return "最近也在稳稳推进自己的事情。"
 

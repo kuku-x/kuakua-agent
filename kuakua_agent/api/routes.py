@@ -98,7 +98,7 @@ async def regenerate_nightly_summary(date: str) -> ApiResponse[dict]:
 @router.post("/chat", response_model=ApiResponse[ChatResponse])
 async def send_chat(request: ChatRequest) -> ApiResponse[ChatResponse]:
     try:
-        result = chat_service.reply(request)
+        result = await chat_service.reply(request)
         return ApiResponse(data=result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

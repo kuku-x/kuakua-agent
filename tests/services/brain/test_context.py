@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
 from kuakua_agent.services.memory.models import Milestone, PraiseHistory
 from kuakua_agent.config import settings
 from kuakua_agent.services.brain.context import ContextBuilder, deduplicate_milestones, summarize_praise_history
@@ -28,10 +29,22 @@ def test_summarize_praise_history_dedup():
     assert len(lines) <= 3
 
 
-def test_technical_question_uses_direct_prompt_and_skips_history():
-    builder = ContextBuilder()
+@pytest.mark.asyncio
+async def test_technical_question_uses_direct_prompt_and_skips_history():
+    mock_ms = AsyncMock()
+    mock_hs = AsyncMock()
+    mock_profile = AsyncMock()
+    mock_weather = MagicMock()
+    mock_weather.get_weather_summary.return_value = "晴"
 
-    messages, enriched_prompt = builder.build_user_context("你用的哪个大模型")
+    builder = ContextBuilder(
+        milestone_store=mock_ms,
+        history_store=mock_hs,
+        profile_store=mock_profile,
+        weather_service=mock_weather,
+    )
+
+    messages, enriched_prompt = await builder.build_user_context("你用的哪个大模型")
 
     assert builder.should_use_chat_history("你用的哪个大模型") is False
     assert enriched_prompt == "你用的哪个大模型"
@@ -40,10 +53,31 @@ def test_technical_question_uses_direct_prompt_and_skips_history():
     assert settings.llm_model_id in messages[1]["content"]
 
 
-def test_identity_question_keeps_praise_context():
-    builder = ContextBuilder()
+@pytest.mark.asyncio
+async def test_identity_question_keeps_praise_context():
+    mock_ms = AsyncMock()
+    mock_hs = AsyncMock()
+    mock_profile = AsyncMock()
+    mock_weather = MagicMock()
+    mock_weather.get_weather_summary.return_value = "晴"
 
-    messages, enriched_prompt = builder.build_user_context("你是谁", weather="晴")
+    # Mock milestone store to return empty list (no recent milestones)
+    mock_ms.get_recent.return_value = []
+
+    # Mock history store
+    mock_hs.get_recent.return_value = []
+
+    # Mock profile store
+    mock_profile.get_all.return_value = []
+
+    builder = ContextBuilder(
+        milestone_store=mock_ms,
+        history_store=mock_hs,
+        profile_store=mock_profile,
+        weather_service=mock_weather,
+    )
+
+    messages, enriched_prompt = await builder.build_user_context("你是谁", weather="晴")
 
     assert builder.should_use_chat_history("你是谁") is True
     assert len(messages) == 2

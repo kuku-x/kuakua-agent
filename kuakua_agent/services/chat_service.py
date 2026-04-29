@@ -21,14 +21,14 @@ class ChatService:
         self._prompt_mgr = PraisePromptManager()
         self._weather = WeatherService()
 
-    def reply(self, request: ChatRequest) -> ChatResponse:
+    async def reply(self, request: ChatRequest) -> ChatResponse:
         started = time.perf_counter()
         chat_id = request.chat_id
         user_message = request.message
         history = self._history_store.get_conversation(chat_id, limit=MAX_HISTORY * 2)
 
         weather = self._weather.get_weather_summary()
-        base_messages, enriched_prompt = self._context_builder.build_user_context(
+        base_messages, enriched_prompt = await self._context_builder.build_user_context(
             user_message=user_message,
             weather=weather,
         )
@@ -75,7 +75,7 @@ class ChatService:
         history = self._history_store.get_conversation(chat_id, limit=MAX_HISTORY * 2)
 
         weather = self._weather.get_weather_summary()
-        base_messages, enriched_prompt = self._context_builder.build_user_context(
+        base_messages, enriched_prompt = await self._context_builder.build_user_context(
             user_message=user_message,
             weather=weather,
         )

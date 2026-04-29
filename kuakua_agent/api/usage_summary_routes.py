@@ -27,7 +27,7 @@ async def get_recent_daily_summaries(days: int = 14) -> ApiResponse[list[dict]]:
         db = DailyUsageSummaryDb()
         items = [
             {"date": s.date, "payload_json": s.payload_json, "updated_at": s.updated_at}
-            for s in db.list_recent(days=days)
+            for s in await db.list_recent_async(days=days)
         ]
         return ApiResponse(data=items)
     except Exception as e:
@@ -46,8 +46,8 @@ async def rebuild_daily_summary(date: str) -> ApiResponse[dict]:
 @usage_router.get("/nightly-summary/latest", response_model=ApiResponse[NightlySummaryResponse | None])
 async def get_latest_nightly_summary() -> ApiResponse[NightlySummaryResponse | None]:
     pref = PreferenceStore()
-    latest_date = (pref.get("nightly_summary_latest_date") or "").strip()
-    latest_content = (pref.get("nightly_summary_latest_content") or "").strip()
+    latest_date = (pref.get_sync("nightly_summary_latest_date") or "").strip()
+    latest_content = (pref.get_sync("nightly_summary_latest_content") or "").strip()
     if not latest_date or not latest_content:
         return ApiResponse(data=None)
 
@@ -55,7 +55,7 @@ async def get_latest_nightly_summary() -> ApiResponse[NightlySummaryResponse | N
         data=NightlySummaryResponse(
             date=latest_date,
             content=latest_content,
-            unread=not pref.get_bool("nightly_summary_latest_read"),
+            unread=not pref.get_bool_sync("nightly_summary_latest_read"),
         )
     )
 
@@ -63,6 +63,6 @@ async def get_latest_nightly_summary() -> ApiResponse[NightlySummaryResponse | N
 @usage_router.post("/nightly-summary/mark-read", response_model=ApiResponse[dict[str, bool]])
 async def mark_latest_nightly_summary_read() -> ApiResponse[dict[str, bool]]:
     pref = PreferenceStore()
-    pref.set("nightly_summary_latest_read", "true")
+    pref.set_sync("nightly_summary_latest_read", "true")
     return ApiResponse(data={"ok": True})
 

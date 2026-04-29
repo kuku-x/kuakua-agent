@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
@@ -34,7 +35,7 @@ class PhoneUsageDb:
     def __init__(self, db: Database | None = None) -> None:
         self._db = db or Database()
 
-    def insert_events(
+    async def _async_insert_events(
         self,
         *,
         batch_id: str | None,
@@ -60,9 +61,8 @@ class PhoneUsageDb:
         ]
         if not rows:
             return
-
-        with self._db._get_conn() as conn:
-            conn.executemany(
+        async with self._db._get_conn() as conn:
+            await conn.executemany(
                 """
                 INSERT INTO phone_usage_events (
                     device_id, device_name, usage_date, package_name, app_name,
@@ -72,24 +72,78 @@ class PhoneUsageDb:
                 """,
                 rows,
             )
-            conn.commit()
+            await conn.commit()
 
-    def get_existing_processed_event_ids(self, event_ids: list[str]) -> set[str]:
+    def insert_events(
+        self,
+        *,
+        batch_id: str | None,
+        device_id: str,
+        device_name: str,
+        entries: Iterable[PhoneUsageEntry],
+        received_at: int,
+    ) -> None:
+        """Synchronous wrapper for insert_events()."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(
+                self._async_insert_events(
+                    batch_id=batch_id,
+                    device_id=device_id,
+                    device_name=device_name,
+                    entries=entries,
+                    received_at=received_at,
+                )
+            )
+        else:
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run,
+                    self._async_insert_events(
+                        batch_id=batch_id,
+                        device_id=device_id,
+                        device_name=device_name,
+                        entries=entries,
+                        received_at=received_at,
+                    ),
+                )
+                return future.result()
+
+    async def _async_get_existing_processed_event_ids(self, event_ids: list[str]) -> set[str]:
         if not event_ids:
             return set()
         placeholders = ",".join(["?"] * len(event_ids))
-        with self._db._get_conn() as conn:
-            rows = conn.execute(
+        async with self._db._get_conn() as conn:
+            cursor = await conn.execute(
                 f"""
                 SELECT event_id
                 FROM phone_processed_events
                 WHERE event_id IN ({placeholders})
                 """,
                 event_ids,
-            ).fetchall()
+            )
+            rows = await cursor.fetchall()
         return {str(row["event_id"]) for row in rows}
 
-    def insert_processed_events(
+    def get_existing_processed_event_ids(self, event_ids: list[str]) -> set[str]:
+        """Synchronous wrapper for get_existing_processed_event_ids()."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self._async_get_existing_processed_event_ids(event_ids))
+        else:
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run, self._async_get_existing_processed_event_ids(event_ids)
+                )
+                return future.result()
+
+    async def _async_insert_processed_events(
         self,
         *,
         device_id: str,
@@ -110,8 +164,8 @@ class PhoneUsageDb:
         ]
         if not rows:
             return
-        with self._db._get_conn() as conn:
-            conn.executemany(
+        async with self._db._get_conn() as conn:
+            await conn.executemany(
                 """
                 INSERT OR IGNORE INTO phone_processed_events (
                     event_id, device_id, usage_date, processed_at, batch_id
@@ -120,17 +174,55 @@ class PhoneUsageDb:
                 """,
                 rows,
             )
-            conn.commit()
+            await conn.commit()
 
-    def upsert_daily(
+    def insert_processed_events(
+        self,
+        *,
+        device_id: str,
+        batch_id: str | None,
+        event_ids: list[str],
+        usage_date_by_event_id: dict[str, str],
+        processed_at: int,
+    ) -> None:
+        """Synchronous wrapper for insert_processed_events()."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(
+                self._async_insert_processed_events(
+                    device_id=device_id,
+                    batch_id=batch_id,
+                    event_ids=event_ids,
+                    usage_date_by_event_id=usage_date_by_event_id,
+                    processed_at=processed_at,
+                )
+            )
+        else:
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run,
+                    self._async_insert_processed_events(
+                        device_id=device_id,
+                        batch_id=batch_id,
+                        event_ids=event_ids,
+                        usage_date_by_event_id=usage_date_by_event_id,
+                        processed_at=processed_at,
+                    ),
+                )
+                return future.result()
+
+    async def _async_upsert_daily(
         self,
         *,
         device_id: str,
         entry: PhoneUsageEntry,
         updated_at: int,
     ) -> None:
-        with self._db._get_conn() as conn:
-            conn.execute(
+        async with self._db._get_conn() as conn:
+            await conn.execute(
                 """
                 INSERT INTO phone_daily_usage (
                     device_id, usage_date, package_name, app_name,
@@ -161,11 +253,37 @@ class PhoneUsageDb:
                     int(updated_at),
                 ),
             )
-            conn.commit()
+            await conn.commit()
 
-    def get_daily_usage(self, device_id: str, usage_date: str) -> list[PhoneDailyAppUsage]:
-        with self._db._get_conn() as conn:
-            rows = conn.execute(
+    def upsert_daily(
+        self,
+        *,
+        device_id: str,
+        entry: PhoneUsageEntry,
+        updated_at: int,
+    ) -> None:
+        """Synchronous wrapper for upsert_daily()."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(
+                self._async_upsert_daily(device_id=device_id, entry=entry, updated_at=updated_at)
+            )
+        else:
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run,
+                    self._async_upsert_daily(device_id=device_id, entry=entry, updated_at=updated_at),
+                )
+                return future.result()
+
+    async def _async_get_daily_usage(
+        self, device_id: str, usage_date: str
+    ) -> list[PhoneDailyAppUsage]:
+        async with self._db._get_conn() as conn:
+            cursor = await conn.execute(
                 """
                 SELECT device_id, usage_date, package_name, app_name,
                        duration_seconds, last_used, event_count
@@ -174,7 +292,8 @@ class PhoneUsageDb:
                 ORDER BY duration_seconds DESC
                 """,
                 (device_id, usage_date),
-            ).fetchall()
+            )
+            rows = await cursor.fetchall()
         return [
             PhoneDailyAppUsage(
                 device_id=row["device_id"],
@@ -188,9 +307,26 @@ class PhoneUsageDb:
             for row in rows
         ]
 
-    def get_daily_usage_all_devices(self, usage_date: str) -> dict[str, list[PhoneDailyAppUsage]]:
-        with self._db._get_conn() as conn:
-            rows = conn.execute(
+    def get_daily_usage(self, device_id: str, usage_date: str) -> list[PhoneDailyAppUsage]:
+        """Synchronous wrapper for get_daily_usage()."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self._async_get_daily_usage(device_id, usage_date))
+        else:
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run, self._async_get_daily_usage(device_id, usage_date)
+                )
+                return future.result()
+
+    async def _async_get_daily_usage_all_devices(
+        self, usage_date: str
+    ) -> dict[str, list[PhoneDailyAppUsage]]:
+        async with self._db._get_conn() as conn:
+            cursor = await conn.execute(
                 """
                 SELECT device_id, usage_date, package_name, app_name,
                        duration_seconds, last_used, event_count
@@ -199,7 +335,8 @@ class PhoneUsageDb:
                 ORDER BY device_id ASC, duration_seconds DESC
                 """,
                 (usage_date,),
-            ).fetchall()
+            )
+            rows = await cursor.fetchall()
 
         by_device: dict[str, list[PhoneDailyAppUsage]] = defaultdict(list)
         for row in rows:
@@ -216,3 +353,19 @@ class PhoneUsageDb:
             )
         return dict(by_device)
 
+    def get_daily_usage_all_devices(
+        self, usage_date: str
+    ) -> dict[str, list[PhoneDailyAppUsage]]:
+        """Synchronous wrapper for get_daily_usage_all_devices()."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self._async_get_daily_usage_all_devices(usage_date))
+        else:
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run, self._async_get_daily_usage_all_devices(usage_date)
+                )
+                return future.result()
