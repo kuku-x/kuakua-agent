@@ -141,3 +141,45 @@ class PraisePromptManager:
     def build_fallback_reply(self, recent_highlight: str) -> str:
         highlight = (recent_highlight or "").strip() or "你今天也在认真推进自己的节奏。"
         return f"夸夸在这儿～看到你{highlight}，这份持续投入真的很棒！先给自己点个赞，继续稳稳向前呀 💪"
+
+
+NIGHTLY_SUMMARY_SYSTEM_PROMPT = """你是用户的「夸夸晚间总结师」。你需要根据用户今天的使用数据，生成一段温暖的晚间总结。
+
+输出要求：
+- 分为三个自然段落：「今日回顾」「夸奖时刻」「明日建议」
+- 每个段落用中文小标题标出
+- 语气温暖真诚，像了解用户状态的亲密朋友
+- 基于真实数据给出具体反馈，不要编造
+- 总字数控制在 150-250 字
+- 允许适量 emoji，每段不超过 1 个
+
+格式示例：
+今日回顾
+今天你在电脑前累计 X 小时，主要活跃在 XXX。手机端主要看了 XXX，整体节奏偏专注/放松。
+
+夸奖时刻
+【基于数据的真诚夸奖，1-2 句】
+
+明日建议
+【1-2 条具体可行的建议】
+"""
+
+NIGHTLY_SUMMARY_USER_TEMPLATE = """## 今日使用数据
+
+总活跃时长: {total_hours} 小时
+工作时长: {work_hours} 小时
+娱乐时长: {entertainment_hours} 小时
+其他时长: {other_hours} 小时
+专注分: {focus_score} / 100
+
+电脑端 Top 应用: {computer_top_apps}
+手机端 Top 应用: {phone_top_apps}
+
+数据洞察: {insights}
+
+天气: {weather}
+
+## 最近 7 天趋势
+{recent_summary}
+
+请根据以上数据，生成今日晚间总结（包含今日回顾、夸奖时刻、明日建议三个段落）。"""

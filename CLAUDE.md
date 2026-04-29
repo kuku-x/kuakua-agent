@@ -9,6 +9,7 @@ AI 夸夸 Agent 桌面软件 - 基于 ActivityWatch 的电脑行为监控与 AI 
 - **后端**: Python FastAPI (`backend/`)
 - **桌面应用**: Electron + Vue 3 + TypeScript (`desktop/`)
 - **外部依赖**: ActivityWatch (`deps/activitywatch/`)
+- **语音合成**: Kokoro-82M 本地离线 TTS（`pip install kokoro`）
 
 ## 目录结构
 

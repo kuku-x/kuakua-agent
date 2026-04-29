@@ -6,7 +6,7 @@
 
 **Architecture:** 单体分层架构，所有新增模块置于 `kuakua_agent/services/` 下，复用现有 FastAPI 路由和 SQLite 数据库。四层通过清晰接口通信，调度器使用 asyncio 后台循环。
 
-**Tech Stack:** Python asyncio, SQLite (复用现有), httpx, plyer (桌面通知), Fish Audio API
+**Tech Stack:** Python asyncio, SQLite (复用现有), httpx, plyer (桌面通知), Kokoro-82M 本地离线 TTS
 
 ---
 
@@ -39,7 +39,7 @@ kuakua_agent/
 │       ├── __init__.py
 │       ├── base.py          # OutputChannel抽象基类
 │       ├── notifier.py      # 桌面系统通知
-│       └── tts.py           # Fish Audio TTS（含兜底）
+│       └── tts.py           # Kokoro-82M 本地离线 TTS（原 Fish Audio 已废弃）
 ├── api/routes.py            # [扩展] 新增夸夸配置/记忆/反馈接口
 ├── schemas/
 │   └── praise.py            # [新建] 夸夸相关Pydantic模型
@@ -350,7 +350,8 @@ class PreferenceStore:
     DEFAULT_PREFS = {
         "praise_auto_enable": "true",
         "tts_enable": "false",
-        "tts_voice": "default",
+        "tts_engine": "kokoro",
+        "kokoro_voice": "zf_001",
         "tts_speed": "1.0",
         "do_not_disturb_start": "22:00",
         "do_not_disturb_end": "08:00",
@@ -1049,7 +1050,7 @@ git commit -m "feat(brain): add router/context/prompt/adapter brain layer"
 
 ---
 
-## Task 3: output 层 — 桌面通知 + Fish Audio TTS（含静默兜底）
+## Task 3: output 层 — 桌面通知 + Kokoro-82M 本地离线 TTS（含静默兜底）
 
 ### 依赖文件
 
@@ -1068,13 +1069,13 @@ Create: `kuakua_agent/services/output/__init__.py`
 ```python
 from kuakua_agent.services.output.base import OutputChannel, OutputManager
 from kuakua_agent.services.output.notifier import SystemNotifier
-from kuakua_agent.services.output.tts import FishTTS
+from kuakua_agent.services.output.tts import KokoroTTS
 
 __all__ = [
     "OutputChannel",
     "OutputManager",
     "SystemNotifier",
-    "FishTTS",
+    "KokoroTTS",
 ]
 ```
 
@@ -1199,14 +1200,13 @@ class SystemNotifier(OutputChannel):
         await proc.communicate()
 ```
 
-- [ ] **Step 4: 创建 tts.py — Fish Audio TTS（含静默兜底）**
+- [ ] **Step 4: 创建 tts.py — Kokoro-82M 本地离线 TTS（含静默兜底）**
 
 Create: `kuakua_agent/services/output/tts.py`
 
 ```python
 import asyncio
 import hashlib
-import httpx
 import subprocess
 import tempfile
 import os
@@ -1216,14 +1216,22 @@ from kuakua_agent.services.output.base import OutputChannel, OutputResult
 from kuakua_agent.services.memory import PreferenceStore
 
 
-class FishTTS(OutputChannel):
-    # Fish Audio API 地址（可配置）
-    DEFAULT_API_URL = "https://api.fish.audio/v1/tts"
+class KokoroTTS(OutputChannel):
+    """本地离线 TTS，通过 Kokoro-82M 模型生成语音。"""
+
+    DEFAULT_VOICE = "zf_001"
 
     def __init__(self, pref_store: PreferenceStore | None = None):
         self._pref = pref_store or PreferenceStore()
         self._cache_dir = Path(tempfile.gettempdir()) / "kuakua_tts"
         self._cache_dir.mkdir(exist_ok=True)
+        self._pipeline = None
+
+    def _get_pipeline(self):
+        if self._pipeline is None:
+            from kokoro import KPipeline
+            self._pipeline = KPipeline(lang_code='z')
+        return self._pipeline
 
     def supports(self, channel_type: str) -> bool:
         return channel_type in ("tts", "voice", "all")
@@ -1232,42 +1240,46 @@ class FishTTS(OutputChannel):
         if not self._pref.get_bool("tts_enable"):
             return OutputResult(success=False, channel="tts", content=content, error="TTS未开启")
 
-        api_url = (metadata or {}).get("api_url", self.DEFAULT_API_URL)
-        voice_id = self._pref.get("tts_voice") or "default"
+        engine = self._pref.get("tts_engine") or "kokoro"
+        if engine == "fish":
+            # 回退到 Fish Audio
+            return await self._send_fish(content, metadata)
+
+        voice = self._pref.get("kokoro_voice") or self.DEFAULT_VOICE
         speed = self._pref.get_float("tts_speed", 1.0)
 
-        cache_key = hashlib.md5(f"{content}:{voice_id}:{speed}".encode()).hexdigest()
-        cached = self._cache_dir / f"{cache_key}.mp3"
+        cache_key = hashlib.md5(f"kokoro:{content}:{voice}:{speed}".encode()).hexdigest()
+        cached = self._cache_dir / f"{cache_key}.wav"
 
         try:
             if cached.exists():
                 await self._play_audio(str(cached))
             else:
-                audio_data = await self._fetch_tts(content, api_url, voice_id, speed)
+                audio_data = self._generate(content, voice, speed)
                 cached.write_bytes(audio_data)
                 await self._play_audio(str(cached))
             return OutputResult(success=True, channel="tts", content=content)
         except Exception as e:
-            # 静默兜底：TTS异常降级为纯通知，不向主流程抛异常
-            return OutputResult(success=False, channel="tts", content=content, error=f"TTS静默失败: {e}")
+            return OutputResult(success=False, channel="tts", content=content, error=f"Kokoro TTS失败: {e}")
 
-    async def _fetch_tts(self, text: str, api_url: str, voice_id: str, speed: float) -> bytes:
-        payload = {
-            "model": voice_id,
-            "text": text,
-            "speed": speed,
-        }
-        headers = {"Content-Type": "application/json"}
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(api_url, json=payload, headers=headers)
-        if response.status_code != 200:
-            raise Exception(f"Fish Audio API失败: {response.status_code}")
-        return response.content
+    def _generate(self, text: str, voice: str, speed: float) -> bytes:
+        """调用 Kokoro 模型生成音频，返回 WAV bytes。"""
+        pipeline = self._get_pipeline()
+        generator = pipeline(text, voice=voice, speed=speed)
+        import numpy as np
+        import soundfile as sf
+        import io
+        audio_chunks = []
+        for _, (_, audio) in enumerate(generator):
+            audio_chunks.append(audio)
+        full_audio = np.concatenate(audio_chunks) if len(audio_chunks) > 1 else audio_chunks[0]
+        buf = io.BytesIO()
+        sf.write(buf, full_audio, 24000, format='WAV')
+        return buf.getvalue()
 
     async def _play_audio(self, filepath: str) -> None:
         """根据平台播放音频文件"""
         if sys.platform == "win32":
-            # 使用 mpv 或直接用 powershell 播放
             proc = await asyncio.create_subprocess_exec(
                 "powershell", "-Command",
                 f'(New-Object System.Media.SoundPlayer "{filepath}").PlaySync()',
@@ -1561,7 +1573,7 @@ from kuakua_agent.services.scheduler.rules import TriggerRule, DEFAULT_RULES
 from kuakua_agent.services.scheduler.cooldown import CooldownManager
 from kuakua_agent.services.brain import ContextBuilder, ModelAdapter
 from kuakua_agent.services.memory import MilestoneStore, PraiseHistoryStore
-from kuakua_agent.services.output import OutputManager, SystemNotifier, FishTTS
+from kuakua_agent.services.output import OutputManager, SystemNotifier, KokoroTTS
 
 logger = logging.getLogger(__name__)
 
@@ -1580,7 +1592,7 @@ class PraiseScheduler:
         self._task: asyncio.Task | None = None
         self._output_mgr = OutputManager()
         self._output_mgr.register(SystemNotifier())
-        self._output_mgr.register(FishTTS())
+        self._output_mgr.register(KokoroTTS())
         self._context_builder = ContextBuilder()
         self._model = ModelAdapter()
 
@@ -1775,7 +1787,8 @@ from pydantic import BaseModel, Field
 class PraiseConfig(BaseModel):
     praise_auto_enable: bool = True
     tts_enable: bool = False
-    tts_voice: str = "default"
+    tts_engine: str = "kokoro"
+    kokoro_voice: str = "zf_001"
     tts_speed: float = 1.0
     do_not_disturb_start: str = "22:00"
     do_not_disturb_end: str = "08:00"
@@ -1833,7 +1846,8 @@ async def get_praise_config() -> PraiseConfig:
     return PraiseConfig(
         praise_auto_enable=pref.get_bool("praise_auto_enable"),
         tts_enable=pref.get_bool("tts_enable"),
-        tts_voice=pref.get("tts_voice") or "default",
+        tts_engine=pref.get("tts_engine") or "kokoro",
+        kokoro_voice=pref.get("kokoro_voice") or "zf_001",
         tts_speed=pref.get_float("tts_speed", 1.0),
         do_not_disturb_start=pref.get("do_not_disturb_start") or "22:00",
         do_not_disturb_end=pref.get("do_not_disturb_end") or "08:00",
@@ -1847,7 +1861,8 @@ async def update_praise_config(payload: PraiseConfig) -> ApiResponse[PraiseConfi
     pref = PreferenceStore()
     pref.set("praise_auto_enable", str(payload.praise_auto_enable).lower())
     pref.set("tts_enable", str(payload.tts_enable).lower())
-    pref.set("tts_voice", payload.tts_voice)
+    pref.set("tts_engine", payload.tts_engine)
+    pref.set("kokoro_voice", payload.kokoro_voice)
     pref.set("tts_speed", str(payload.tts_speed))
     pref.set("do_not_disturb_start", payload.do_not_disturb_start)
     pref.set("do_not_disturb_end", payload.do_not_disturb_end)

@@ -81,8 +81,6 @@ export interface SettingsPayload {
   data_masking: boolean
   doubao_api_key?: string
   openweather_location: string
-  fish_audio_api_key?: string
-  fish_audio_model: string
   nightly_summary_enable: boolean
   nightly_summary_time: string
 }
@@ -92,10 +90,14 @@ export interface SettingsResponse {
   data_masking: boolean
   doubao_api_key_set: boolean
   openweather_location: string
-  fish_audio_api_key_set: boolean
-  fish_audio_model: string
   nightly_summary_enable: boolean
   nightly_summary_time: string
+}
+
+export interface NightlySummary {
+  date: string
+  content: string
+  unread: boolean
 }
 
 export interface ActivityWatchStatus {
@@ -108,7 +110,8 @@ export interface ActivityWatchStatus {
 export interface PraiseConfig {
   praise_auto_enable: boolean
   tts_enable: boolean
-  tts_voice: string
+  kokoro_voice: string
+  kokoro_model_path: string
   tts_speed: number
   do_not_disturb_start: string
   do_not_disturb_end: string

@@ -152,8 +152,6 @@ export function normalizeSettings(value: unknown): SettingsResponse {
     data_masking: Boolean(item.data_masking),
     doubao_api_key_set: Boolean(item.doubao_api_key_set),
     openweather_location: asString(item.openweather_location, 'Shanghai,CN'),
-    fish_audio_api_key_set: Boolean(item.fish_audio_api_key_set),
-    fish_audio_model: asString(item.fish_audio_model, 's2-pro'),
     nightly_summary_enable: Boolean(item.nightly_summary_enable),
     nightly_summary_time: asString(item.nightly_summary_time, '21:30'),
   }

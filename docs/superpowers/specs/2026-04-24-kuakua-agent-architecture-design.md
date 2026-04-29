@@ -38,7 +38,7 @@ services/
     ├── __init__.py
     ├── base.py        # 输出基类/接口
     ├── notifier.py    # 桌面系统通知
-    └── tts.py         # Fish Audio TTS语音输出
+    └── tts.py         # Kokoro-82M 本地离线 TTS 语音输出（原 Fish Audio 已废弃）
 ```
 
 ---
@@ -76,7 +76,8 @@ services/
 **内置全局偏好键：**
 - `praise_auto_enable`: bool — 全局开关，控制是否开启主动触发夸夸调度（默认 true）
 - `tts_enable`: bool — TTS语音开关（默认 false）
-- `tts_voice`: str — TTS音色ID
+- `tts_engine`: str — TTS引擎：`kokoro`（本地）/ `fish`（云端），默认 `kokoro`
+- `kokoro_voice`: str — Kokoro 中文音色 ID（默认 `zf_001`，可选 zf_001~zf_099）
 - `tts_speed`: float — TTS语速（默认 1.0）
 - `do_not_disturb_start`: str — 免打扰开始时间（如 "22:00"）
 - `do_not_disturb_end`: str — 免打扰结束时间（如 "08:00"）
@@ -194,11 +195,14 @@ class OutputChannel(ABC):
 - 点击回调（可跳转聊天窗口）
 
 ### 5.3 TTS语音（tts.py）
-- 对接 Fish Audio API
+- 默认使用 Kokoro-82M 本地离线 TTS（Apache 2.0 开源）
+- 仅 82M 参数，CPU 实时推理，100+ 中文音色可选
+- 安装：`pip install kokoro soundfile`
+- 模型下载：从 ModelScope 或 Hugging Face 下载 v1.1-zh 权重（~350MB）
 - 音频文件缓存（hash-based）
-- 配置项：音色选择、语速、开关
+- 配置项：引擎选择（kokoro/fish）、音色 ID（kokoro_voice）、语速、开关
 - 异步调用，不阻塞主流程
-- **静默兜底**：Fish Audio 接口异常或网络失败时，自动降级为仅发送桌面通知，不抛异常、不打断主流程
+- **静默兜底**：本地 TTS 异常时，自动降级为仅发送桌面通知，不抛异常、不打断主流程
 
 ---
 
@@ -232,7 +236,7 @@ class OutputChannel(ABC):
          ▼
 ┌─────────────────┐
 │    Output       │
-│ 通知 +/ TTS     │
+│ 通知 +/ TTS（Kokoro-82M） │
 └─────────────────┘
 ```
 
@@ -248,6 +252,8 @@ class OutputChannel(ABC):
 | POST | /memory/milestones | 新增里程碑 |
 | GET | /memory/profiles | 获取场景画像 |
 | POST | /feedback | 提交夸夸反馈 |
+| GET | /nightly-summary/{date} | 获取 LLM 生成的今日晚间总结（含回顾+夸奖+建议） |
+| POST | /nightly-summary/{date} | 重新生成今日晚间总结 |
 
 ---
 
@@ -255,7 +261,7 @@ class OutputChannel(ABC):
 
 1. **memory 层** — 数据库初始化 + 基础CRUD + 内置偏好初始化
 2. **brain 层** — Prompt模板 + 上下文组装（含去重）+ 模型适配
-3. **output 层** — 通知 + TTS封装（含静默兜底）
+3. **output 层** — 通知 + Kokoro-82M TTS封装（含静默兜底）
 4. **scheduler 层** — 规则 + 调度循环（30s间隔）+ 全局开关 + 冷却控制
 5. **接入现有项目** — 对接 routes + chat_service
 6. **前端对接** — 配置面板（全局开关、TTS开关、免打扰时段）+ 反馈入口

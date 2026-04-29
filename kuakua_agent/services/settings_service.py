@@ -1,3 +1,4 @@
+from kuakua_agent.config import settings
 from kuakua_agent.schemas.settings import SettingsPayload, SettingsResponse
 from kuakua_agent.services.memory import PreferenceStore
 
@@ -12,7 +13,6 @@ class SettingsService:
             "aw_server_url": "http://127.0.0.1:5600",
             "data_masking": "false",
             "openweather_location": "Shanghai,CN",
-            "fish_audio_model": "s2-pro",
             "nightly_summary_enable": "true",
             "nightly_summary_time": "21:30",
         }
@@ -24,10 +24,8 @@ class SettingsService:
         return SettingsResponse(
             aw_server_url=self._pref.get("aw_server_url") or "http://127.0.0.1:5600",
             data_masking=self._pref.get_bool("data_masking"),
-            doubao_api_key_set=bool(self._pref.get("model_api_key")),
+            doubao_api_key_set=bool(self._pref.get("model_api_key") or settings.llm_api_key),
             openweather_location=self._pref.get("openweather_location") or "Shanghai,CN",
-            fish_audio_api_key_set=bool(self._pref.get("fish_audio_api_key")),
-            fish_audio_model=self._pref.get("fish_audio_model") or "s2-pro",
             nightly_summary_enable=self._pref.get_bool("nightly_summary_enable"),
             nightly_summary_time=self._pref.get("nightly_summary_time") or "21:30",
         )
@@ -36,14 +34,11 @@ class SettingsService:
         self._pref.set("aw_server_url", str(payload.aw_server_url).rstrip("/"))
         self._pref.set("data_masking", str(payload.data_masking).lower())
         self._pref.set("openweather_location", payload.openweather_location.strip())
-        self._pref.set("fish_audio_model", payload.fish_audio_model.strip())
         self._pref.set("nightly_summary_enable", str(payload.nightly_summary_enable).lower())
         self._pref.set("nightly_summary_time", payload.nightly_summary_time.strip())
 
         if payload.doubao_api_key:
             self._pref.set("model_api_key", payload.doubao_api_key.strip())
-        if payload.fish_audio_api_key:
-            self._pref.set("fish_audio_api_key", payload.fish_audio_api_key.strip())
 
         return self.get_settings()
 

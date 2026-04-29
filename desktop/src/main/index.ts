@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { Notification, app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 
 let mainWindow: BrowserWindow | null = null
@@ -63,4 +63,28 @@ app.on('activate', () => {
 // IPC示例
 ipcMain.handle('get-app-version', () => {
   return app.getVersion()
+})
+
+ipcMain.handle('show-system-notification', (_event, payload: { title: string; body: string }) => {
+  const notification = new Notification({
+    title: payload.title,
+    body: payload.body,
+    silent: false,
+  })
+
+  notification.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+      mainWindow.show()
+      mainWindow.focus()
+      return
+    }
+
+    createWindow()
+  })
+
+  notification.show()
+  return true
 })

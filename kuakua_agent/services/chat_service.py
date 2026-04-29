@@ -32,7 +32,10 @@ class ChatService:
             user_message=user_message,
             weather=weather,
         )
-        messages = [base_messages[0], *history, {"role": "user", "content": enriched_prompt}]
+        if self._context_builder.should_use_chat_history(user_message):
+            messages = [*base_messages[:1], *history, {"role": "user", "content": enriched_prompt}]
+        else:
+            messages = base_messages
 
         used_fallback = False
         try:
@@ -76,7 +79,10 @@ class ChatService:
             user_message=user_message,
             weather=weather,
         )
-        messages = [base_messages[0], *history, {"role": "user", "content": enriched_prompt}]
+        if self._context_builder.should_use_chat_history(user_message):
+            messages = [*base_messages[:1], *history, {"role": "user", "content": enriched_prompt}]
+        else:
+            messages = base_messages
 
         full_reply = ""
         used_fallback = False

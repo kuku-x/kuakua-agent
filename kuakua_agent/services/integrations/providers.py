@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib.util
+
 from kuakua_agent.config import settings
 from kuakua_agent.services.activitywatch import ActivityWatchClient
 from kuakua_agent.services.integrations.base import IntegrationHealth, IntegrationProvider
@@ -27,7 +29,11 @@ class ActivityWatchIntegration(IntegrationProvider):
             configured=True,
             healthy=healthy,
             capabilities=self.capabilities,
-            message=(f"已连接，检测到 {len(buckets)} 个 buckets" if healthy else f"未连接，请检查地址 {base_url}"),
+            message=(
+                f"Connected, detected {len(buckets)} buckets"
+                if healthy
+                else f"Not connected, please check {base_url}"
+            ),
         )
 
 
@@ -43,7 +49,7 @@ class OpenWeatherIntegration(IntegrationProvider):
     def health_check(self) -> IntegrationHealth:
         location = self._pref.get("openweather_location") or getattr(settings, "openweather_location", "Shanghai,CN")
         configured = bool(location.strip())
-        summary = self._weather.get_weather_summary() if configured else "未配置天气位置"
+        summary = self._weather.get_weather_summary() if configured else "Location not configured"
         healthy = configured and summary != "未知"
         return IntegrationHealth(
             name=self.name,
@@ -52,23 +58,23 @@ class OpenWeatherIntegration(IntegrationProvider):
             configured=configured,
             healthy=healthy,
             capabilities=self.capabilities,
-            message=(summary if healthy else f"未就绪，当前位置配置为 {location}"),
+            message=(summary if healthy else f"Not ready, current location is {location}"),
         )
 
 
-class FishAudioIntegration(IntegrationProvider):
-    name = "fish_audio"
-    display_name = "Fish Audio"
+class KokoroIntegration(IntegrationProvider):
+    name = "kokoro_tts"
+    display_name = "Kokoro-82M"
     capabilities = ["tts", "voice", "audio"]
 
     def __init__(self, pref_store: PreferenceStore | None = None) -> None:
         self._pref = pref_store or PreferenceStore()
 
     def health_check(self) -> IntegrationHealth:
-        api_key = self._pref.get("fish_audio_api_key") or getattr(settings, "fish_audio_api_key", "")
-        voice_id = self._pref.get("tts_voice") or "default"
-        configured = bool(api_key)
-        healthy = configured and bool(voice_id and voice_id != "default")
+        model_source = (self._pref.get("kokoro_model_path") or "./ckpts/kokoro-v1.1").strip()
+        voice_id = (self._pref.get("kokoro_voice") or self._pref.get("tts_voice") or "zf_001").strip()
+        configured = bool(model_source and voice_id)
+        healthy = configured and importlib.util.find_spec("kokoro") is not None
         return IntegrationHealth(
             name=self.name,
             display_name=self.display_name,
@@ -76,5 +82,9 @@ class FishAudioIntegration(IntegrationProvider):
             configured=configured,
             healthy=healthy,
             capabilities=self.capabilities,
-            message=("已配置，可用于语音播报" if healthy else "未就绪，请补全 Fish Audio API Key 和 Fish Voice ID"),
+            message=(
+                f"Ready with voice `{voice_id}`"
+                if healthy
+                else f"Not ready. Check Kokoro install and model source `{model_source}`."
+            ),
         )

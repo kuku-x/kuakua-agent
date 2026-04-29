@@ -3,6 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from kuakua_agent.schemas.common import ApiResponse
+from kuakua_agent.schemas.nightly_summary import NightlySummaryResponse
+from kuakua_agent.services.memory import PreferenceStore
 from kuakua_agent.services.usage.daily_summarizer import DailyUsageSummarizer
 from kuakua_agent.services.usage.daily_summary_db import DailyUsageSummaryDb
 
@@ -39,4 +41,28 @@ async def rebuild_daily_summary(date: str) -> ApiResponse[dict]:
         return ApiResponse(data={"date": payload.date, "payload_json": payload.payload_json})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@usage_router.get("/nightly-summary/latest", response_model=ApiResponse[NightlySummaryResponse | None])
+async def get_latest_nightly_summary() -> ApiResponse[NightlySummaryResponse | None]:
+    pref = PreferenceStore()
+    latest_date = (pref.get("nightly_summary_latest_date") or "").strip()
+    latest_content = (pref.get("nightly_summary_latest_content") or "").strip()
+    if not latest_date or not latest_content:
+        return ApiResponse(data=None)
+
+    return ApiResponse(
+        data=NightlySummaryResponse(
+            date=latest_date,
+            content=latest_content,
+            unread=not pref.get_bool("nightly_summary_latest_read"),
+        )
+    )
+
+
+@usage_router.post("/nightly-summary/mark-read", response_model=ApiResponse[dict[str, bool]])
+async def mark_latest_nightly_summary_read() -> ApiResponse[dict[str, bool]]:
+    pref = PreferenceStore()
+    pref.set("nightly_summary_latest_read", "true")
+    return ApiResponse(data={"ok": True})
 

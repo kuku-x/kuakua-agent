@@ -1,7 +1,8 @@
 import pytest
 from datetime import datetime
 from kuakua_agent.services.memory.models import Milestone, PraiseHistory
-from kuakua_agent.services.brain.context import deduplicate_milestones, summarize_praise_history
+from kuakua_agent.config import settings
+from kuakua_agent.services.brain.context import ContextBuilder, deduplicate_milestones, summarize_praise_history
 
 
 def test_deduplicate_milestones_same_hour():
@@ -25,3 +26,26 @@ def test_summarize_praise_history_dedup():
     summary = summarize_praise_history(history, max_chars=200)
     lines = [l for l in summary.split("\n") if l.startswith("-")]
     assert len(lines) <= 3
+
+
+def test_technical_question_uses_direct_prompt_and_skips_history():
+    builder = ContextBuilder()
+
+    messages, enriched_prompt = builder.build_user_context("你用的哪个大模型")
+
+    assert builder.should_use_chat_history("你用的哪个大模型") is False
+    assert enriched_prompt == "你用的哪个大模型"
+    assert len(messages) == 3
+    assert messages[-1] == {"role": "user", "content": "你用的哪个大模型"}
+    assert settings.llm_model_id in messages[1]["content"]
+
+
+def test_identity_question_keeps_praise_context():
+    builder = ContextBuilder()
+
+    messages, enriched_prompt = builder.build_user_context("你是谁", weather="晴")
+
+    assert builder.should_use_chat_history("你是谁") is True
+    assert len(messages) == 2
+    assert messages[0]["role"] == "system"
+    assert "我是你的专属夸夸呀" in enriched_prompt

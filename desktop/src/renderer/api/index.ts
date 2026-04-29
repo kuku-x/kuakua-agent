@@ -13,6 +13,7 @@ import type {
   ProfileResponse,
   FeedbackCreate,
   AggregatedUsage,
+  NightlySummary,
 } from '@/types/api'
 
 const api = axios.create({
@@ -93,5 +94,11 @@ export const submitFeedback = (data: FeedbackCreate) =>
 
 export const fetchAggregatedUsage = (date: string) =>
   api.get<ApiResponse<AggregatedUsage>>('/usage/aggregate', { params: { date } })
+
+export const getLatestNightlySummary = () =>
+  api.get<ApiResponse<NightlySummary | null>>('/usage/nightly-summary/latest')
+
+export const markNightlySummaryRead = () =>
+  api.post<ApiResponse<{ ok: boolean }>>('/usage/nightly-summary/mark-read')
 
 export default api

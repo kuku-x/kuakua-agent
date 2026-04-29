@@ -8,6 +8,8 @@ class PreferenceStore:
         "praise_auto_enable": "true",
         "tts_enable": "false",
         "tts_voice": "default",
+        "kokoro_voice": "zf_001",
+        "kokoro_model_path": "./ckpts/kokoro-v1.1",
         "tts_speed": "1.0",
         "fish_audio_model": "s2-pro",
         "openweather_location": "Shanghai,CN",
@@ -18,6 +20,9 @@ class PreferenceStore:
         "nightly_summary_enable": "true",
         "nightly_summary_time": "21:30",
         "nightly_summary_last_sent_date": "",
+        "nightly_summary_latest_date": "",
+        "nightly_summary_latest_content": "",
+        "nightly_summary_latest_read": "true",
     }
 
     def __init__(self, db: Database | None = None):

@@ -1,6 +1,6 @@
 from kuakua_agent.services.output.base import OutputChannel, OutputManager, OutputResult
 from kuakua_agent.services.output.notifier import SystemNotifier
-from kuakua_agent.services.output.tts import FishTTS
+from kuakua_agent.services.output.tts import FishTTS, KokoroTTS
 
 __all__ = [
     "OutputChannel",
@@ -8,4 +8,5 @@ __all__ = [
     "OutputResult",
     "SystemNotifier",
     "FishTTS",
+    "KokoroTTS",
 ]

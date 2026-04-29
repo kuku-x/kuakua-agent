@@ -6,7 +6,7 @@ from kuakua_agent.services.scheduler.rules import TriggerRule, DEFAULT_RULES
 from kuakua_agent.services.scheduler.cooldown import CooldownManager
 from kuakua_agent.services.brain import ContextBuilder, ModelAdapter
 from kuakua_agent.services.memory import MilestoneStore, PraiseHistoryStore
-from kuakua_agent.services.output import OutputManager, SystemNotifier, FishTTS
+from kuakua_agent.services.output import KokoroTTS, OutputManager, SystemNotifier
 from kuakua_agent.services.weather import WeatherService
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class PraiseScheduler:
         self._task: asyncio.Task | None = None
         self._output_mgr = OutputManager()
         self._output_mgr.register(SystemNotifier())
-        self._output_mgr.register(FishTTS())
+        self._output_mgr.register(KokoroTTS())
         self._context_builder = ContextBuilder()
         self._model = ModelAdapter()
         self._weather = WeatherService()

@@ -16,6 +16,8 @@ def test_default_prefs_initialized(temp_db):
     store = PreferenceStore(db=temp_db)
     assert store.get_bool("praise_auto_enable") is True
     assert store.get_bool("tts_enable") is False
+    assert store.get("kokoro_voice") == "zf_001"
+    assert store.get("kokoro_model_path") == "./ckpts/kokoro-v1.1"
     assert store.get_int("max_praises_per_day") == 10
 
 def test_set_and_get(temp_db):
