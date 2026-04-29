@@ -88,11 +88,24 @@ import SettingsPanel from '@/components/settings/SettingsPanel.vue'
 import SettingsTrigger from '@/components/settings/SettingsTrigger.vue'
 import { useChatStore } from '@/store/chat'
 import { useSummaryStore } from '@/store/summary'
+import { useWebSocket } from '@/hooks/useWebSocket'
 import type { NightlySummary } from '@/types/api'
 
 const route = useRoute()
 const chatStore = useChatStore()
 const summaryStore = useSummaryStore()
+
+const { on } = useWebSocket()
+
+// Listen for proactive praise pushes from backend scheduler
+on('praise_push', (event) => {
+  if (event.type === 'praise_push') {
+    window.electronAPI?.showSystemNotification?.({
+      title: '夸夸 Agent',
+      body: event.data.content,
+    })
+  }
+})
 
 const sidebarCollapsed = ref(false)
 const mobileSidebarOpen = ref(false)

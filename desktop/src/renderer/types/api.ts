@@ -80,18 +80,12 @@ export interface SettingsPayload {
   aw_server_url: string
   data_masking: boolean
   doubao_api_key?: string
-  openweather_location: string
-  nightly_summary_enable: boolean
-  nightly_summary_time: string
 }
 
 export interface SettingsResponse {
   aw_server_url: string
   data_masking: boolean
   doubao_api_key_set: boolean
-  openweather_location: string
-  nightly_summary_enable: boolean
-  nightly_summary_time: string
 }
 
 export interface NightlySummary {
@@ -115,8 +109,8 @@ export interface PraiseConfig {
   tts_speed: number
   do_not_disturb_start: string
   do_not_disturb_end: string
-  max_praises_per_day: number
-  global_cooldown_minutes: number
+  nightly_summary_enable: boolean
+  nightly_summary_time: string
 }
 
 export interface MilestoneResponse {

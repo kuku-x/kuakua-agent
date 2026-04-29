@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 1;
   display: flex;
-  width: min(560px, calc(100vw - 24px));
+  width: min(720px, calc(100vw - 24px));
   height: calc(100vh - 24px);
   margin: 12px;
   flex-direction: column;

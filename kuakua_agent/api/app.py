@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+import json
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -14,6 +15,7 @@ from kuakua_agent.api.usage_summary_routes import (
 )
 from kuakua_agent.core.logging import configure_logging, get_logger
 from kuakua_agent.core.tracing import TRACE_ID_HEADER, new_trace_id
+from kuakua_agent.services.websocket_manager import ws_manager
 
 logger = get_logger(__name__)
 
@@ -50,5 +52,21 @@ def create_app() -> FastAPI:
     app.include_router(usage_summary_router, prefix="/api")
     app.include_router(usage_jobs_router, prefix="/api")
     app.include_router(activitywatch_proxy_router, prefix="/api")
+
+    @app.websocket("/ws")
+    async def websocket_endpoint(websocket: WebSocket):
+        await ws_manager.connect(websocket)
+        try:
+            while True:
+                data = await websocket.receive_text()
+                try:
+                    msg = json.loads(data)
+                    if msg.get("type") == "ping":
+                        await websocket.send_text(json.dumps({"type": "pong"}))
+                except Exception:
+                    pass
+        except WebSocketDisconnect:
+            await ws_manager.disconnect(websocket)
+
     logger.info("api_app_initialized", extra={"module_name": "api", "event": "startup_init"})
     return app

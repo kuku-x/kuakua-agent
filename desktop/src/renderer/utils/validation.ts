@@ -151,8 +151,5 @@ export function normalizeSettings(value: unknown): SettingsResponse {
     aw_server_url: asString(item.aw_server_url, 'http://127.0.0.1:5600'),
     data_masking: Boolean(item.data_masking),
     doubao_api_key_set: Boolean(item.doubao_api_key_set),
-    openweather_location: asString(item.openweather_location, 'Shanghai,CN'),
-    nightly_summary_enable: Boolean(item.nightly_summary_enable),
-    nightly_summary_time: asString(item.nightly_summary_time, '21:30'),
   }
 }

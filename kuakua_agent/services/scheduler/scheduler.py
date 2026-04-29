@@ -8,6 +8,7 @@ from kuakua_agent.services.brain import ContextBuilder, ModelAdapter
 from kuakua_agent.services.memory import MilestoneStore, PraiseHistoryStore
 from kuakua_agent.services.output import KokoroTTS, OutputManager, SystemNotifier
 from kuakua_agent.services.weather import WeatherService
+from kuakua_agent.services.websocket_manager import ws_manager
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,10 @@ class PraiseScheduler:
             metadata={"trigger": event.trigger_type.value},
         )
         await self._cooldown.record_praise()
+        await ws_manager.send_praise(
+            content=praise_content,
+            trigger=event.trigger_type.value,
+        )
         logger.info(f"主动夸夸已发送: {praise_content[:30]}...")
         return praise_content
 

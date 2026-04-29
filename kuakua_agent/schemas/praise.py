@@ -9,8 +9,8 @@ class PraiseConfig(BaseModel):
     tts_speed: float = 1.0
     do_not_disturb_start: str = "22:00"
     do_not_disturb_end: str = "08:00"
-    max_praises_per_day: int = 10
-    global_cooldown_minutes: int = 30
+    nightly_summary_enable: bool = True
+    nightly_summary_time: str = "21:30"
 
 
 class MilestoneCreate(BaseModel):

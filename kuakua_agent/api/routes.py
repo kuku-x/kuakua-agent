@@ -198,8 +198,8 @@ async def get_praise_config() -> ApiResponse[PraiseConfig]:
         tts_speed=pref.get_float("tts_speed", 1.0),
         do_not_disturb_start=pref.get("do_not_disturb_start") or "22:00",
         do_not_disturb_end=pref.get("do_not_disturb_end") or "08:00",
-        max_praises_per_day=pref.get_int("max_praises_per_day", 10),
-        global_cooldown_minutes=pref.get_int("global_cooldown_minutes", 30),
+        nightly_summary_enable=pref.get_bool("nightly_summary_enable"),
+        nightly_summary_time=pref.get("nightly_summary_time") or "21:30",
     ))
 
 
@@ -216,8 +216,8 @@ async def update_praise_config(payload: PraiseConfig) -> ApiResponse[PraiseConfi
     pref.set("tts_speed", str(payload.tts_speed))
     pref.set("do_not_disturb_start", payload.do_not_disturb_start)
     pref.set("do_not_disturb_end", payload.do_not_disturb_end)
-    pref.set("max_praises_per_day", str(payload.max_praises_per_day))
-    pref.set("global_cooldown_minutes", str(payload.global_cooldown_minutes))
+    pref.set("nightly_summary_enable", str(payload.nightly_summary_enable).lower())
+    pref.set("nightly_summary_time", payload.nightly_summary_time)
     return ApiResponse(data=payload)
 
 
