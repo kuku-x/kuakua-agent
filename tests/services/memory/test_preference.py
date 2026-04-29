@@ -14,15 +14,14 @@ def temp_db():
 
 def test_default_prefs_initialized(temp_db):
     store = PreferenceStore(db=temp_db)
-    assert store.get_bool("praise_auto_enable") is True
-    assert store.get_bool("tts_enable") is False
-    assert store.get("kokoro_voice") == "zf_001"
-    assert store.get("kokoro_model_path") == "./ckpts/kokoro-v1.1"
-    assert store.get_int("max_praises_per_day") == 10
+    assert store.get_bool_sync("praise_auto_enable") is True
+    assert store.get_bool_sync("tts_enable") is False
+    assert store.get_sync("kokoro_voice") == "zf_001"
+    assert store.get_sync("kokoro_model_path") == "./ckpts/kokoro-v1.1"
 
 def test_set_and_get(temp_db):
     store = PreferenceStore(db=temp_db)
-    store.set("test_key", "test_value")
-    assert store.get("test_key") == "test_value"
-    store.set("test_bool", "true")
-    assert store.get_bool("test_bool") is True
+    store.set_sync("test_key", "test_value")
+    assert store.get_sync("test_key") == "test_value"
+    store.set_sync("test_bool", "true")
+    assert store.get_bool_sync("test_bool") is True

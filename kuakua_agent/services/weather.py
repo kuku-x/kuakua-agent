@@ -53,7 +53,7 @@ class WeatherService:
         if now < self._cached_until:
             return self._cached_summary
 
-        location = self._pref.get("openweather_location") or getattr(settings, "openweather_location", "Shanghai,CN")
+        location = self._pref.get_sync("openweather_location") or getattr(settings, "openweather_location", "Shanghai,CN")
         if not location.strip():
             return "未知"
 

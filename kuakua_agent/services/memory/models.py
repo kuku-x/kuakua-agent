@@ -1,6 +1,6 @@
-import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 
 @dataclass
@@ -14,7 +14,7 @@ class Milestone:
     is_recalled: bool
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "Milestone":
+    def from_row(cls, row: Any) -> "Milestone":
         return cls(
             id=row["id"],
             event_type=row["event_type"],
@@ -35,7 +35,7 @@ class PraiseHistory:
     created_at: datetime
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "PraiseHistory":
+    def from_row(cls, row: Any) -> "PraiseHistory":
         return cls(
             id=row["id"],
             content=row["content"],
@@ -53,7 +53,7 @@ class UserPreference:
     updated_at: datetime
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "UserPreference":
+    def from_row(cls, row: Any) -> "UserPreference":
         return cls(
             id=row["id"],
             key=row["key"],
@@ -71,7 +71,7 @@ class SceneProfile:
     updated_at: datetime
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "SceneProfile":
+    def from_row(cls, row: Any) -> "SceneProfile":
         import json
         return cls(
             id=row["id"],
@@ -90,7 +90,7 @@ class FeedbackLog:
     created_at: datetime
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "FeedbackLog":
+    def from_row(cls, row: Any) -> "FeedbackLog":
         return cls(
             id=row["id"],
             praise_id=row["praise_id"],

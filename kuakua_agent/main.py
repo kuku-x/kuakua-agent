@@ -1,4 +1,5 @@
 from kuakua_agent.api.app import create_app
+from kuakua_agent.services.memory import get_database
 from kuakua_agent.services.scheduler import PraiseScheduler
 from kuakua_agent.services.activitywatch import ActivityWatchScheduler
 from kuakua_agent.services.nightly_summary_scheduler import NightlySummaryScheduler
@@ -13,6 +14,8 @@ nightly_summary_scheduler: NightlySummaryScheduler | None = None
 @app.on_event("startup")
 async def startup():
     global scheduler, aw_scheduler, nightly_summary_scheduler
+    db = get_database()
+    await db.init_db()
     scheduler = PraiseScheduler()
     await scheduler.start()
     aw_scheduler = ActivityWatchScheduler()

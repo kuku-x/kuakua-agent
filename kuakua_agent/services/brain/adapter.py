@@ -12,7 +12,7 @@ class ModelAdapter:
     def __init__(self):
         pref = PreferenceStore()
         self.base_url = settings.llm_base_url.rstrip("/")
-        raw_key = pref.get("model_api_key") or settings.llm_api_key
+        raw_key = pref.get_sync("model_api_key") or settings.llm_api_key
         self.api_key = raw_key.strip() if raw_key else ""
         if not self.api_key:
             raise ValueError("API key is not configured. Please set LLM_API_KEY or model_api_key.")

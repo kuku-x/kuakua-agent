@@ -1,6 +1,6 @@
-import sqlite3
+import aiosqlite
 from pathlib import Path
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 
 ROOT_DIR = Path(__file__).parent.parent.parent.parent
 DB_PATH = ROOT_DIR / "kuakua_agent.db"
@@ -120,18 +120,17 @@ CREATE INDEX IF NOT EXISTS idx_daily_usage_summary_updated_at ON daily_usage_sum
 class Database:
     def __init__(self, db_path: Path | None = None):
         self.db_path = db_path or DB_PATH
-        self._init_db()
 
-    def _init_db(self) -> None:
-        with self._get_conn() as conn:
-            conn.executescript(SCHEMA)
-            conn.commit()
+    async def init_db(self) -> None:
+        async with self._get_conn() as conn:
+            await conn.executescript(SCHEMA)
+            await conn.commit()
 
-    @contextmanager
-    def _get_conn(self):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
+    @asynccontextmanager
+    async def _get_conn(self):
+        conn = await aiosqlite.connect(self.db_path)
+        conn.row_factory = aiosqlite.Row
         try:
             yield conn
         finally:
-            conn.close()
+            await conn.close()

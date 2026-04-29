@@ -4,6 +4,7 @@ from kuakua_agent.services.memory.preference import PreferenceStore
 from kuakua_agent.services.memory.profile import ProfileStore
 from kuakua_agent.services.memory.feedback import FeedbackStore
 from kuakua_agent.services.memory.history import PraiseHistoryStore
+from kuakua_agent.services.memory.chat_history import ChatHistoryStore
 
 __all__ = [
     "Database",
@@ -12,6 +13,7 @@ __all__ = [
     "ProfileStore",
     "FeedbackStore",
     "PraiseHistoryStore",
+    "ChatHistoryStore",
 ]
 
 _db_instance: Database | None = None

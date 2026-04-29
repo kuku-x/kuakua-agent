@@ -61,11 +61,11 @@ class NightlySummaryScheduler:
             await asyncio.sleep(self.POLL_INTERVAL)
 
     async def _tick(self) -> None:
-        if not self._pref.get_bool("nightly_summary_enable"):
+        if not await self._pref.get_bool("nightly_summary_enable"):
             return
 
         now = datetime.now()
-        if not self._should_send_now(now):
+        if not await self._should_send_now(now):
             return
 
         target_date = now.date().isoformat()
@@ -83,23 +83,24 @@ class NightlySummaryScheduler:
             logger.exception("nightly_summary_dispatch_failed")
             return
 
-        self._pref.set("nightly_summary_latest_date", target_date)
-        self._pref.set("nightly_summary_latest_content", content)
-        self._pref.set("nightly_summary_latest_read", "false")
-        PraiseHistoryStore().add(
+        await self._pref.set("nightly_summary_latest_date", target_date)
+        await self._pref.set("nightly_summary_latest_content", content)
+        await self._pref.set("nightly_summary_latest_read", "false")
+        history_store = PraiseHistoryStore()
+        await history_store.add(
             content=content,
             trigger_type="nightly_summary",
             context_snapshot={"date": target_date},
         )
-        self._pref.set("nightly_summary_last_sent_date", target_date)
+        await self._pref.set("nightly_summary_last_sent_date", target_date)
         logger.info("nightly_summary_sent", extra={"date": target_date})
 
-    def _should_send_now(self, now: datetime) -> bool:
-        scheduled_time = self._parse_time(self._pref.get("nightly_summary_time") or "21:30")
+    async def _should_send_now(self, now: datetime) -> bool:
+        scheduled_time = self._parse_time(await self._pref.get("nightly_summary_time") or "21:30")
         if scheduled_time is None:
             scheduled_time = (21, 30)
 
-        last_sent = (self._pref.get("nightly_summary_last_sent_date") or "").strip()
+        last_sent = (await self._pref.get("nightly_summary_last_sent_date") or "").strip()
         today = now.date().isoformat()
         if last_sent == today:
             return False

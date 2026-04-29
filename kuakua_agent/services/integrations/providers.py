@@ -18,7 +18,7 @@ class ActivityWatchIntegration(IntegrationProvider):
         self._pref = pref_store or PreferenceStore()
 
     def health_check(self) -> IntegrationHealth:
-        base_url = self._pref.get("aw_server_url") or "http://127.0.0.1:5600"
+        base_url = self._pref.get_sync("aw_server_url") or "http://127.0.0.1:5600"
         client = ActivityWatchClient(base_url=base_url)
         buckets = client.get_buckets()
         healthy = bool(buckets)
@@ -47,7 +47,7 @@ class OpenWeatherIntegration(IntegrationProvider):
         self._weather = WeatherService(self._pref)
 
     def health_check(self) -> IntegrationHealth:
-        location = self._pref.get("openweather_location") or getattr(settings, "openweather_location", "Shanghai,CN")
+        location = self._pref.get_sync("openweather_location") or getattr(settings, "openweather_location", "Shanghai,CN")
         configured = bool(location.strip())
         summary = self._weather.get_weather_summary() if configured else "Location not configured"
         healthy = configured and summary != "未知"
@@ -71,14 +71,14 @@ class KokoroIntegration(IntegrationProvider):
         self._pref = pref_store or PreferenceStore()
 
     def health_check(self) -> IntegrationHealth:
-        model_source = (self._pref.get("kokoro_model_path") or "./ckpts/kokoro-v1.1").strip()
-        voice_id = (self._pref.get("kokoro_voice") or self._pref.get("tts_voice") or "zf_001").strip()
+        model_source = (self._pref.get_sync("kokoro_model_path") or "./ckpts/kokoro-v1.1").strip()
+        voice_id = (self._pref.get_sync("kokoro_voice") or self._pref.get_sync("tts_voice") or "zf_001").strip()
         configured = bool(model_source and voice_id)
         healthy = configured and importlib.util.find_spec("kokoro") is not None
         return IntegrationHealth(
             name=self.name,
             display_name=self.display_name,
-            enabled=self._pref.get_bool("tts_enable"),
+            enabled=self._pref.get_bool_sync("tts_enable"),
             configured=configured,
             healthy=healthy,
             capabilities=self.capabilities,

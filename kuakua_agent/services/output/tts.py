@@ -30,20 +30,20 @@ class FishTTS(OutputChannel):
         return channel_type in ("tts", "voice", "all")
 
     async def send(self, content: str, metadata: dict | None = None) -> OutputResult:
-        if not self._pref.get_bool("tts_enable"):
+        if not await self._pref.get_bool("tts_enable"):
             return OutputResult(success=False, channel="tts", content=content, error="TTS not enabled")
 
-        api_key = self._pref.get("fish_audio_api_key") or getattr(settings, "fish_audio_api_key", "")
+        api_key = await self._pref.get("fish_audio_api_key") or getattr(settings, "fish_audio_api_key", "")
         if not api_key:
             return OutputResult(success=False, channel="tts", content=content, error="Fish Audio API key is not configured")
 
-        voice_id = self._pref.get("tts_voice") or ""
+        voice_id = await self._pref.get("tts_voice") or ""
         if not voice_id or voice_id == "default":
             return OutputResult(success=False, channel="tts", content=content, error="Fish Audio voice id is not configured")
 
         api_url = (metadata or {}).get("api_url", self.DEFAULT_API_URL)
-        speed = self._pref.get_float("tts_speed", 1.0)
-        model = self._pref.get("fish_audio_model") or self.DEFAULT_MODEL
+        speed = await self._pref.get_float("tts_speed", 1.0)
+        model = await self._pref.get("fish_audio_model") or self.DEFAULT_MODEL
 
         cache_key = hashlib.md5(f"{content}:{voice_id}:{speed}:{model}".encode("utf-8")).hexdigest()
         cached = self._cache_dir / f"{cache_key}.wav"
@@ -117,11 +117,11 @@ class KokoroTTS(OutputChannel):
         return channel_type in ("tts", "voice", "all")
 
     async def send(self, content: str, metadata: dict | None = None) -> OutputResult:
-        if not self._pref.get_bool("tts_enable"):
+        if not await self._pref.get_bool("tts_enable"):
             return OutputResult(success=False, channel="tts", content=content, error="TTS not enabled")
 
-        voice = self._get_voice()
-        speed = self._pref.get_float("tts_speed", 1.0)
+        voice = await self._get_voice()
+        speed = await self._pref.get_float("tts_speed", 1.0)
         model_source = self._get_model_source()
 
         cache_key = hashlib.md5(f"{content}:{voice}:{speed}:{model_source}".encode("utf-8")).hexdigest()
@@ -181,12 +181,12 @@ class KokoroTTS(OutputChannel):
         self._pipeline_source = model_source
         return self._pipeline
 
-    def _get_voice(self) -> str:
-        voice = (self._pref.get("kokoro_voice") or self._pref.get("tts_voice") or self.DEFAULT_VOICE).strip()
+    async def _get_voice(self) -> str:
+        voice = (await self._pref.get("kokoro_voice") or await self._pref.get("tts_voice") or self.DEFAULT_VOICE).strip()
         return voice or self.DEFAULT_VOICE
 
     def _get_model_source(self) -> str:
-        raw_value = (self._pref.get("kokoro_model_path") or self.DEFAULT_MODEL_PATH).strip()
+        raw_value = (self._pref.get_sync("kokoro_model_path") or self.DEFAULT_MODEL_PATH).strip()
         if not raw_value:
             raw_value = self.DEFAULT_MODEL_SOURCE
 

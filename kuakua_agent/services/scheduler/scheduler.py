@@ -49,11 +49,11 @@ class PraiseScheduler:
         logger.info("夸夸调度器已停止")
 
     async def trigger_now(self, event: SchedulerEvent) -> str | None:
-        if not self._cooldown.can_praise():
+        if not await self._cooldown.can_praise():
             logger.info("触发被冷却拦截")
             return None
 
-        messages, _ = self._context_builder.build_proactive_context(
+        messages, _ = await self._context_builder.build_proactive_context(
             trigger_type=event.trigger_type.value,
             env_context=str(event.data or {}),
             weather=self._weather.get_weather_summary(),
@@ -66,7 +66,7 @@ class PraiseScheduler:
             return None
 
         history_store = PraiseHistoryStore()
-        history_store.add(
+        await history_store.add(
             content=praise_content,
             trigger_type=event.trigger_type.value,
             context_snapshot=event.data,
@@ -74,13 +74,13 @@ class PraiseScheduler:
 
         if event.data and "milestone_id" in event.data:
             ms = MilestoneStore()
-            ms.mark_recalled(event.data["milestone_id"])
+            await ms.mark_recalled(event.data["milestone_id"])
 
         await self._output_mgr.dispatch(
             praise_content,
             metadata={"trigger": event.trigger_type.value},
         )
-        self._cooldown.record_praise()
+        await self._cooldown.record_praise()
         logger.info(f"主动夸夸已发送: {praise_content[:30]}...")
         return praise_content
 
@@ -93,7 +93,7 @@ class PraiseScheduler:
             await asyncio.sleep(self.POLL_INTERVAL)
 
     async def _check_rules(self) -> None:
-        if not self._cooldown.can_praise():
+        if not await self._cooldown.can_praise():
             return
 
         now = datetime.now()
@@ -105,7 +105,7 @@ class PraiseScheduler:
             if not rule.evaluate_time(now):
                 continue
 
-            recent = milestone_store.get_recent(hours=2)
+            recent = await milestone_store.get_recent(hours=2)
             focus_minutes = sum(
                 25 for m in recent
                 if m.event_type == "focus" and (now - m.occurred_at).total_seconds() < 7200

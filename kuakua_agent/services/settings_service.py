@@ -13,32 +13,24 @@ class SettingsService:
             "aw_server_url": "http://127.0.0.1:5600",
             "data_masking": "false",
             "openweather_location": "Shanghai,CN",
-            "nightly_summary_enable": "true",
-            "nightly_summary_time": "21:30",
         }
         for key, value in defaults.items():
-            if self._pref.get(key) is None:
-                self._pref.set(key, value)
+            if self._pref.get_sync(key) is None:
+                self._pref.set_sync(key, value)
 
     def get_settings(self) -> SettingsResponse:
         return SettingsResponse(
-            aw_server_url=self._pref.get("aw_server_url") or "http://127.0.0.1:5600",
-            data_masking=self._pref.get_bool("data_masking"),
-            doubao_api_key_set=bool(self._pref.get("model_api_key") or settings.llm_api_key),
-            openweather_location=self._pref.get("openweather_location") or "Shanghai,CN",
-            nightly_summary_enable=self._pref.get_bool("nightly_summary_enable"),
-            nightly_summary_time=self._pref.get("nightly_summary_time") or "21:30",
+            aw_server_url=self._pref.get_sync("aw_server_url") or "http://127.0.0.1:5600",
+            data_masking=self._pref.get_bool_sync("data_masking"),
+            doubao_api_key_set=bool(self._pref.get_sync("model_api_key") or settings.llm_api_key),
         )
 
     def update_settings(self, payload: SettingsPayload) -> SettingsResponse:
-        self._pref.set("aw_server_url", str(payload.aw_server_url).rstrip("/"))
-        self._pref.set("data_masking", str(payload.data_masking).lower())
-        self._pref.set("openweather_location", payload.openweather_location.strip())
-        self._pref.set("nightly_summary_enable", str(payload.nightly_summary_enable).lower())
-        self._pref.set("nightly_summary_time", payload.nightly_summary_time.strip())
+        self._pref.set_sync("aw_server_url", str(payload.aw_server_url).rstrip("/"))
+        self._pref.set_sync("data_masking", str(payload.data_masking).lower())
 
         if payload.doubao_api_key:
-            self._pref.set("model_api_key", payload.doubao_api_key.strip())
+            self._pref.set_sync("model_api_key", payload.doubao_api_key.strip())
 
         return self.get_settings()
 
