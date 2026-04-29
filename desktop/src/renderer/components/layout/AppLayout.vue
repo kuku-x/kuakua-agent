@@ -43,6 +43,33 @@
       </header>
 
       <div class="app-layout__content">
+        <section v-if="nightlySummary" class="nightly-summary-card">
+          <div class="nightly-summary-card__head">
+            <div>
+              <p class="nightly-summary-card__eyebrow">Tonight Summary</p>
+              <h2>Nightly summary is ready</h2>
+            </div>
+
+            <button
+              class="nightly-summary-card__dismiss"
+              type="button"
+              aria-label="Dismiss nightly summary"
+              @click="dismissNightlySummary"
+            >
+              ×
+            </button>
+          </div>
+
+          <p class="nightly-summary-card__date">{{ nightlySummary.date }}</p>
+          <p class="nightly-summary-card__content">{{ nightlySummary.content }}</p>
+
+          <div class="nightly-summary-card__actions">
+            <button class="nightly-summary-card__action" type="button" @click="dismissNightlySummary">
+              Mark as read
+            </button>
+          </div>
+        </section>
+
         <router-view />
       </div>
     </main>
@@ -52,14 +79,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { getLatestNightlySummary, markNightlySummaryRead } from '@/api'
 import GlobalError from '@/components/GlobalError.vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import SettingsPanel from '@/components/settings/SettingsPanel.vue'
 import SettingsTrigger from '@/components/settings/SettingsTrigger.vue'
 import { useChatStore } from '@/store/chat'
 import { useSummaryStore } from '@/store/summary'
+import type { NightlySummary } from '@/types/api'
 
 const route = useRoute()
 const chatStore = useChatStore()
@@ -68,6 +97,9 @@ const summaryStore = useSummaryStore()
 const sidebarCollapsed = ref(false)
 const mobileSidebarOpen = ref(false)
 const settingsOpen = ref(false)
+const nightlySummary = ref<NightlySummary | null>(null)
+const notifiedNightlyDate = ref('')
+let nightlySummaryPoller: number | null = null
 
 const currentEyebrow = computed(() => {
   if (route.path === '/chat') return '陪伴聊天'
@@ -115,6 +147,18 @@ onMounted(() => {
   if (!summaryStore.summary && !summaryStore.loading) {
     summaryStore.fetchTodaySummary()
   }
+
+  void syncNightlySummary()
+  nightlySummaryPoller = window.setInterval(() => {
+    void syncNightlySummary()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (nightlySummaryPoller !== null) {
+    window.clearInterval(nightlySummaryPoller)
+    nightlySummaryPoller = null
+  }
 })
 
 function handleSidebarToggle() {
@@ -124,6 +168,36 @@ function handleSidebarToggle() {
   }
 
   sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+async function syncNightlySummary() {
+  try {
+    const response = await getLatestNightlySummary()
+    const latest = response.data.data
+    nightlySummary.value = latest?.unread ? latest : null
+
+    if (!latest?.unread || notifiedNightlyDate.value === latest.date) {
+      return
+    }
+
+    notifiedNightlyDate.value = latest.date
+    await window.electronAPI?.showSystemNotification?.({
+      title: 'Kuakua nightly summary is ready',
+      body: latest.content,
+    })
+  } catch (error: unknown) {
+    console.error('Failed to sync nightly summary:', error)
+  }
+}
+
+async function dismissNightlySummary() {
+  try {
+    await markNightlySummaryRead()
+  } catch (error: unknown) {
+    console.error('Failed to dismiss nightly summary:', error)
+  } finally {
+    nightlySummary.value = null
+  }
 }
 </script>
 
@@ -254,6 +328,83 @@ function handleSidebarToggle() {
   padding: 0 var(--space-6) var(--space-6);
 }
 
+.nightly-summary-card {
+  margin-bottom: var(--space-5);
+  padding: var(--space-5);
+  background:
+    linear-gradient(135deg, rgba(201, 138, 105, 0.16), rgba(212, 168, 75, 0.1)),
+    rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(201, 138, 105, 0.18);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(10px);
+}
+
+.nightly-summary-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.nightly-summary-card__eyebrow {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nightly-summary-card h2 {
+  font-size: clamp(1.3rem, 2vw, 1.7rem);
+  letter-spacing: -0.02em;
+}
+
+.nightly-summary-card__dismiss,
+.nightly-summary-card__action {
+  border: none;
+  cursor: pointer;
+}
+
+.nightly-summary-card__dismiss {
+  width: 36px;
+  height: 36px;
+  color: var(--color-text-secondary);
+  font-size: 1.5rem;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: var(--radius-full);
+}
+
+.nightly-summary-card__date {
+  margin-top: var(--space-3);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.nightly-summary-card__content {
+  margin-top: var(--space-3);
+  color: var(--color-text-primary);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.nightly-summary-card__actions {
+  margin-top: var(--space-4);
+}
+
+.nightly-summary-card__action {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-xs);
+}
+
 .mobile-only {
   display: none;
 }
@@ -273,6 +424,10 @@ function handleSidebarToggle() {
 
   .app-layout__content {
     padding: 0 var(--space-4) var(--space-4);
+  }
+
+  .nightly-summary-card {
+    padding: var(--space-4);
   }
 
   .app-layout__status {

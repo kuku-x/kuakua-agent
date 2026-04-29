@@ -16,7 +16,7 @@
             :hint="
               apiKeySet
                 ? '当前已经配置密钥，留空则保持现有设置。'
-                : '用于聊天与每日摘要生成。'
+                : '用于聊天与晚间总结生成。'
             "
           />
         </div>
@@ -26,7 +26,7 @@
             v-model="settings.aw_server_url"
             label="ActivityWatch 地址"
             placeholder="http://127.0.0.1:5600"
-            hint="填写你本地 ActivityWatch 服务的访问地址。"
+            hint="填写本地 ActivityWatch 服务地址。"
           />
         </div>
 
@@ -47,30 +47,7 @@
             v-model="settings.openweather_location"
             label="天气位置"
             placeholder="Shanghai,CN"
-            hint="免费天气服务无需 API Key，支持城市名或 城市,国家代码，例如 Shanghai,CN。"
-          />
-        </div>
-
-        <div class="settings-sheet__field">
-          <KuInput
-            v-model="fishAudioApiKeyInput"
-            type="password"
-            label="Fish Audio API Key"
-            placeholder="请输入 Fish Audio API Key"
-            :hint="
-              settings.fish_audio_api_key_set
-                ? '当前已经配置 Fish Audio 密钥，留空则保持现有设置。'
-                : '用于将夸夸内容转换成语音播报。'
-            "
-          />
-        </div>
-
-        <div class="settings-sheet__field">
-          <KuInput
-            v-model="settings.fish_audio_model"
-            label="Fish Audio 模型"
-            placeholder="s2-pro"
-            hint="Fish Audio 请求头中的 model 值，默认使用 s2-pro。"
+            hint="用于天气上下文，支持城市名或 城市,国家代码。"
           />
         </div>
 
@@ -83,6 +60,26 @@
             <input v-model="settings.data_masking" type="checkbox" />
             <span></span>
           </label>
+        </div>
+
+        <div class="settings-sheet__toggle">
+          <div>
+            <p>晚间总结提醒</p>
+            <small>每天到设定时间后生成当天总结，并在桌面端展示提醒与完整内容。</small>
+          </div>
+          <label class="settings-sheet__switch">
+            <input v-model="settings.nightly_summary_enable" type="checkbox" />
+            <span></span>
+          </label>
+        </div>
+
+        <div class="settings-sheet__field">
+          <KuInput
+            v-model="settings.nightly_summary_time"
+            label="晚间总结时间"
+            placeholder="21:30"
+            hint="使用 24 小时制，例如 21:30。"
+          />
         </div>
       </div>
 
@@ -111,7 +108,7 @@
         <div class="settings-sheet__toggle">
           <div>
             <p>主动夸夸</p>
-            <small>开启后，夸夸 Agent 会根据时间与行为组合规则自动发起夸夸。</small>
+            <small>开启后，Agent 会根据时间与行为规则自动发起夸夸。</small>
           </div>
           <label class="settings-sheet__switch">
             <input v-model="praise.praise_auto_enable" type="checkbox" />
@@ -122,7 +119,7 @@
         <div class="settings-sheet__toggle">
           <div>
             <p>语音播报</p>
-            <small>开启后，夸夸内容会通过 Fish Audio 生成语音并本地播放。</small>
+            <small>开启后，夸夸内容会通过 Kokoro-82M 生成本地语音并播放。</small>
           </div>
           <label class="settings-sheet__switch">
             <input v-model="praise.tts_enable" type="checkbox" />
@@ -132,9 +129,19 @@
 
         <div class="settings-sheet__field">
           <KuInput
-            v-model="praise.tts_voice"
-            label="Fish Voice ID"
-            placeholder="请输入 Fish Audio reference_id"
+            v-model="praise.kokoro_model_path"
+            label="Kokoro 模型路径"
+            placeholder="./ckpts/kokoro-v1.1"
+            hint="可填写本地模型目录，或保留默认路径。"
+          />
+        </div>
+
+        <div class="settings-sheet__field">
+          <KuInput
+            v-model="praise.kokoro_voice"
+            label="Kokoro 音色 ID"
+            placeholder="zf_001"
+            hint="例如 zf_001、zf_002、zf_032。"
           />
         </div>
 
@@ -255,12 +262,11 @@ const settings = ref<SettingsResponse>({
   data_masking: false,
   doubao_api_key_set: false,
   openweather_location: 'Shanghai,CN',
-  fish_audio_api_key_set: false,
-  fish_audio_model: 's2-pro',
+  nightly_summary_enable: true,
+  nightly_summary_time: '21:30',
 })
 
 const apiKeyInput = ref('')
-const fishAudioApiKeyInput = ref('')
 const apiKeySet = ref(false)
 const saving = ref(false)
 const saveMessage = ref('')
@@ -271,7 +277,8 @@ const awStatusLoading = ref(false)
 const praise = ref<PraiseConfig>({
   praise_auto_enable: true,
   tts_enable: false,
-  tts_voice: 'default',
+  kokoro_voice: 'zf_001',
+  kokoro_model_path: './ckpts/kokoro-v1.1',
   tts_speed: 1.0,
   do_not_disturb_start: '22:00',
   do_not_disturb_end: '08:00',
@@ -306,7 +313,8 @@ async function loadPraiseConfig() {
       praise.value = praiseRes.data.data
     }
   } catch (error: unknown) {
-    void error
+    praiseSaveSuccess.value = false
+    praiseSaveMsg.value = handleApiError(error)
   }
 }
 
@@ -336,24 +344,19 @@ async function saveSettings() {
       aw_server_url: settings.value.aw_server_url,
       data_masking: settings.value.data_masking,
       openweather_location: settings.value.openweather_location,
-      fish_audio_model: settings.value.fish_audio_model,
+      nightly_summary_enable: settings.value.nightly_summary_enable,
+      nightly_summary_time: settings.value.nightly_summary_time,
     }
 
     const trimmedApiKey = apiKeyInput.value.trim()
-    const trimmedFishKey = fishAudioApiKeyInput.value.trim()
-
     if (trimmedApiKey) {
       payload.doubao_api_key = trimmedApiKey
-    }
-    if (trimmedFishKey) {
-      payload.fish_audio_api_key = trimmedFishKey
     }
 
     const response = await updateSettings(payload)
     settings.value = normalizeSettings(response.data.data)
     apiKeySet.value = settings.value.doubao_api_key_set
     apiKeyInput.value = ''
-    fishAudioApiKeyInput.value = ''
     saveSuccess.value = true
     saveMessage.value = '设置已保存'
     await refreshActivityWatchStatus()
@@ -386,6 +389,8 @@ async function savePraiseConfig() {
   try {
     const payload = {
       ...praise.value,
+      kokoro_model_path: praise.value.kokoro_model_path.trim(),
+      kokoro_voice: praise.value.kokoro_voice.trim(),
       tts_speed: Number(praise.value.tts_speed),
       max_praises_per_day: Number(praise.value.max_praises_per_day),
       global_cooldown_minutes: Number(praise.value.global_cooldown_minutes),

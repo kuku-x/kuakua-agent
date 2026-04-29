@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta, timezone
@@ -18,6 +19,14 @@ ENTERTAINMENT_KEYWORDS = {
     "spotify", "music", "netease", "qqmusic", "bilibili", "douyin", "youtube",
     "netflix", "steam", "game", "discord", "weibo", "xiaohongshu",
 }
+
+PRAISE_SUGGESTION_PROMPT = """你是用户的「夸夸」助手。请根据以下今日数据，生成两段内容。
+
+第一段「夸奖」：基于真实数据给出温暖、具体的正向反馈。结合 top 应用、专注分等线索，落在具体行为上。
+第二段「建议」：给出 1-2 条温柔可行的建议，帮助用户明天更好。
+
+直接输出如下 JSON 格式（不要额外文字）：
+{"praise": "夸奖内容", "suggestions": ["建议1", "建议2"]}"""
 
 APP_NAME_MAP = {
     "msedge": "Microsoft Edge",
@@ -83,6 +92,13 @@ class SummaryService:
     def __init__(self, client: ActivityWatchClient | None = None) -> None:
         self._client = client or ActivityWatchClient()
         self._local_tz = datetime.now().astimezone().tzinfo or timezone.utc
+        self._model = None
+
+    def _get_model(self):
+        if self._model is None:
+            from kuakua_agent.services.brain.adapter import ModelAdapter
+            self._model = ModelAdapter()
+        return self._model
 
     def get_today_summary(self) -> SummaryResponse:
         return self.get_summary(date.today().isoformat())
@@ -95,8 +111,21 @@ class SummaryService:
         end_utc = end_local.astimezone(timezone.utc)
 
         buckets = self._client.get_main_buckets()
+        window_bucket = buckets.get("window")
+        if not window_bucket:
+            return SummaryResponse(
+                date=target_date,
+                total_hours=0,
+                work_hours=0,
+                entertainment_hours=0,
+                other_hours=0,
+                top_apps=[],
+                focus_score=0,
+                praise_text="今天还没有记录。",
+                suggestions=["确认 ActivityWatch 正在运行，然后回来看看今天的使用摘要。"],
+            )
         window_events = self._client.get_events(
-            buckets["window"],
+            window_bucket,
             start=start_utc,
             end=end_utc,
             limit=5000,
@@ -168,15 +197,144 @@ class SummaryService:
             other_hours=other_hours,
             top_apps=top_apps,
             focus_score=focus_score,
-            praise_text=self._build_praise_text(total_hours, work_hours, focus_score, top_apps),
-            suggestions=self._build_suggestions(
+            praise_text=self._build_praise_text_llm(
+                total_hours, work_hours, focus_score, top_apps
+            ),
+            suggestions=self._build_suggestions_llm(
                 total_hours=total_hours,
                 work_hours=work_hours,
                 entertainment_hours=entertainment_hours,
                 other_hours=other_hours,
                 focus_score=focus_score,
+                top_apps=top_apps,
             ),
         )
+
+    def generate_praise_and_suggestions(
+        self,
+        total_hours: float,
+        work_hours: float,
+        entertainment_hours: float,
+        other_hours: float,
+        focus_score: int,
+        top_apps: list[AppUsage],
+    ) -> tuple[str, list[str]]:
+        if total_hours <= 0:
+            return "今天的记录还不多，没关系，慢慢开始也很好。", []
+
+        app_list = ", ".join([f"{a.name}({a.duration}h)" for a in top_apps[:5]]) if top_apps else "未知"
+
+        user_prompt = (
+            f"总活跃时长: {total_hours}h\n"
+            f"工作时长: {work_hours}h\n"
+            f"娱乐时长: {entertainment_hours}h\n"
+            f"其他时长: {other_hours}h\n"
+            f"专注分: {focus_score}/100\n"
+            f"Top应用: {app_list}\n\n"
+            f"请生成夸奖和建议。"
+        )
+
+        try:
+            messages = [
+                {"role": "system", "content": PRAISE_SUGGESTION_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ]
+            model = self._get_model()
+            result = model.complete(messages, temperature=0.7, max_tokens=400)
+            return self._parse_praise_suggestion_json(result)
+        except Exception:
+            logging.getLogger(__name__).exception("llm_praise_suggestion_failed")
+            return (
+                self._build_praise_text(total_hours, work_hours, focus_score, top_apps),
+                self._build_suggestions(
+                    total_hours=total_hours,
+                    work_hours=work_hours,
+                    entertainment_hours=entertainment_hours,
+                    other_hours=other_hours,
+                    focus_score=focus_score,
+                ),
+            )
+
+    def _build_praise_text_llm(
+        self,
+        total_hours: float,
+        work_hours: float,
+        focus_score: int,
+        top_apps: list[AppUsage],
+    ) -> str:
+        if total_hours <= 0:
+            return "今天的记录还不多，没关系，慢慢开始也很好。"
+
+        app_list = ", ".join([f"{a.name}({a.duration}h)" for a in top_apps[:5]]) if top_apps else "未知"
+        user_prompt = (
+            f"总活跃: {total_hours}h, 工作: {work_hours}h, 专注分: {focus_score}/100, Top应用: {app_list}\n"
+            f"请生成夸奖（40-80字）。"
+        )
+        try:
+            messages = [
+                {"role": "system", "content": "你是用户的夸夸助手。请基于数据给出温暖、具体的正向反馈。输出一句夸奖（40-80字），不要加任何前缀。"},
+                {"role": "user", "content": user_prompt},
+            ]
+            model = self._get_model()
+            result = model.complete(messages, temperature=0.7, max_tokens=150)
+            return result.strip()
+        except Exception:
+            return self._build_praise_text(total_hours, work_hours, focus_score, top_apps)
+
+    def _build_suggestions_llm(
+        self,
+        *,
+        total_hours: float,
+        work_hours: float,
+        entertainment_hours: float,
+        other_hours: float,
+        focus_score: int,
+        top_apps: list[AppUsage],
+    ) -> list[str]:
+        if total_hours <= 0:
+            return ["先让 ActivityWatch 持续记录一段时间，再回来查看更完整的总结。"]
+
+        app_list = ", ".join([f"{a.name}" for a in top_apps[:3]]) if top_apps else "未知"
+        user_prompt = (
+            f"活跃: {total_hours}h, 工作: {work_hours}h, 娱乐: {entertainment_hours}h, 其他: {other_hours}h, "
+            f"专注分: {focus_score}/100, Top: {app_list}\n"
+            f"输出1-2条建议，每条20-50字，JSON: {{\"suggestions\": [\"建议1\", \"建议2\"]}}"
+        )
+        try:
+            messages = [
+                {"role": "system", "content": "你是用户的温柔建议助手。基于使用数据给出1-2条具体可行的小建议。输出JSON格式。"},
+                {"role": "user", "content": user_prompt},
+            ]
+            model = self._get_model()
+            result = model.complete(messages, temperature=0.7, max_tokens=200)
+            _, suggestions = self._parse_praise_suggestion_json(result)
+            return suggestions if suggestions else self._build_suggestions(
+                total_hours=total_hours, work_hours=work_hours,
+                entertainment_hours=entertainment_hours, other_hours=other_hours,
+                focus_score=focus_score,
+            )
+        except Exception:
+            return self._build_suggestions(
+                total_hours=total_hours, work_hours=work_hours,
+                entertainment_hours=entertainment_hours, other_hours=other_hours,
+                focus_score=focus_score,
+            )
+
+    def _parse_praise_suggestion_json(self, raw: str) -> tuple[str, list[str]]:
+        try:
+            import json
+            text = raw.strip()
+            if text.startswith("```"):
+                lines = text.split("\n")
+                text = "\n".join(lines[1:]) if len(lines) > 1 else text
+                if text.endswith("```"):
+                    text = text[:-3]
+            data = json.loads(text)
+            praise = str(data.get("praise", "")).strip()
+            suggestions = [str(s).strip() for s in (data.get("suggestions") or []) if str(s).strip()]
+            return praise, suggestions
+        except (json.JSONDecodeError, AttributeError):
+            return raw.strip(), []
 
     def _parse_dt(self, value: object) -> datetime | None:
         if not isinstance(value, str):

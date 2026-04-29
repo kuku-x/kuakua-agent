@@ -1,6 +1,8 @@
 import json
 from datetime import datetime
 
+from kuakua_agent.config import settings
+
 from kuakua_agent.services.memory import (
     MilestoneStore,
     PraiseHistoryStore,
@@ -38,8 +40,7 @@ def summarize_praise_history(history: list, max_chars: int = 300) -> str:
     return summary
 
 
-def deduplicate_milestones(milestones: list, within_hours: int = 1) -> list:
-    del within_hours
+def deduplicate_milestones(milestones: list) -> list:
     seen: dict = {}
     for m in milestones:
         key = (m.event_type, m.occurred_at.replace(minute=0, second=0, microsecond=0))
@@ -49,6 +50,34 @@ def deduplicate_milestones(milestones: list, within_hours: int = 1) -> list:
 
 
 class ContextBuilder:
+    TECH_QUESTION_PATTERNS = [
+        "你用的哪个",
+        "你用哪个",
+        "用的什么模型",
+        "用什么模型",
+        "模型是什么",
+        "哪个大模型",
+        "大模型",
+        "api",
+        "api_key",
+        "key",
+        "token",
+        "base_url",
+        "deepseek",
+        "openai",
+        "claude",
+        "gpt",
+        "你是怎么实现的",
+        "你怎么",
+        "什么原理",
+        "怎么做的",
+        "如何实现",
+        "请问",
+        "多少",
+        "在哪里",
+        "是什么",
+    ]
+
     def __init__(
         self,
         milestone_store=None,
@@ -64,11 +93,49 @@ class ContextBuilder:
         self._weather = weather_service or WeatherService(self._pref)
         self._prompt_mgr = PraisePromptManager()
 
+    def _is_technical_question(self, user_message: str) -> bool:
+        normalized = user_message.strip().lower()
+        return any(pattern in normalized for pattern in self.TECH_QUESTION_PATTERNS)
+
+    def should_use_chat_history(self, user_message: str) -> bool:
+        return not self._is_technical_question(user_message)
+
+    def _build_technical_prompt(self, user_message: str) -> str:
+        normalized = user_message.strip().lower()
+        if any(token in normalized for token in ["模型", "大模型", "deepseek", "gpt", "claude", "openai"]):
+            return (
+                "用户在询问当前项目使用的大模型或模型配置。"
+                "请直接、明确回答，不要转成夸夸话术，不要结合行为数据。"
+                f"当前配置的模型 ID 是：{settings.llm_model_id}。"
+                f"当前配置的 LLM Base URL 是：{settings.llm_base_url}。"
+                "如果用户问“你用的哪个大模型”，优先直接回答模型 ID；"
+                "如果合适，再补一句这是项目当前配置，实际也可能被环境变量覆盖。"
+            )
+        return (
+            "用户在询问技术或配置信息。"
+            "请直接、简洁、准确回答，不要转成夸夸话术，不要结合行为数据。"
+        )
+
     def build_user_context(
         self,
         user_message: str,
         weather: str = "未知",
     ) -> tuple[list[dict], str]:
+        if self._is_technical_question(user_message):
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "你是一个友善的技术助手。"
+                        "请直接、简洁、准确地回答用户的问题。"
+                        "不要使用夸夸语气，不要结合行为数据发挥。"
+                    ),
+                },
+                {"role": "system", "content": self._build_technical_prompt(user_message)},
+                {"role": "user", "content": user_message},
+            ]
+            return messages, user_message
+
         if weather == "未知":
             weather = self._weather.get_weather_summary()
 

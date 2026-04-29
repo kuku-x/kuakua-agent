@@ -79,6 +79,22 @@ async def get_summary(date: str) -> ApiResponse[SummaryResponse]:
     return ApiResponse(data=summary_service.get_summary(date))
 
 
+@router.get("/nightly-summary/{date}", response_model=ApiResponse[dict])
+async def get_nightly_summary(date: str) -> ApiResponse[dict]:
+    from kuakua_agent.services.brain.nightly_summary_generator import NightlySummaryGenerator
+    generator = NightlySummaryGenerator()
+    content = generator.generate(date)
+    return ApiResponse(data={"date": date, "summary": content})
+
+
+@router.post("/nightly-summary/{date}", response_model=ApiResponse[dict])
+async def regenerate_nightly_summary(date: str) -> ApiResponse[dict]:
+    from kuakua_agent.services.brain.nightly_summary_generator import NightlySummaryGenerator
+    generator = NightlySummaryGenerator()
+    content = generator.generate(date)
+    return ApiResponse(data={"date": date, "summary": content})
+
+
 @router.post("/chat", response_model=ApiResponse[ChatResponse])
 async def send_chat(request: ChatRequest) -> ApiResponse[ChatResponse]:
     try:
@@ -164,8 +180,10 @@ async def check_activitywatch(payload: ActivityWatchCheckPayload) -> ApiResponse
 
 @router.delete("/settings/data", response_model=ApiResponse[dict[str, bool]])
 async def delete_all_data() -> ApiResponse[dict[str, bool]]:
-    settings_service.delete_all_data()
-    return ApiResponse(data={"deleted": True})
+    raise HTTPException(
+        status_code=501,
+        detail="数据删除功能暂未实现，请稍后再试。",
+    )
 
 
 # GET /settings/praise
@@ -175,7 +193,8 @@ async def get_praise_config() -> ApiResponse[PraiseConfig]:
     return ApiResponse(data=PraiseConfig(
         praise_auto_enable=pref.get_bool("praise_auto_enable"),
         tts_enable=pref.get_bool("tts_enable"),
-        tts_voice=pref.get("tts_voice") or "default",
+        kokoro_voice=pref.get("kokoro_voice") or pref.get("tts_voice") or "zf_001",
+        kokoro_model_path=pref.get("kokoro_model_path") or "./ckpts/kokoro-v1.1",
         tts_speed=pref.get_float("tts_speed", 1.0),
         do_not_disturb_start=pref.get("do_not_disturb_start") or "22:00",
         do_not_disturb_end=pref.get("do_not_disturb_end") or "08:00",
@@ -190,7 +209,10 @@ async def update_praise_config(payload: PraiseConfig) -> ApiResponse[PraiseConfi
     pref = PreferenceStore()
     pref.set("praise_auto_enable", str(payload.praise_auto_enable).lower())
     pref.set("tts_enable", str(payload.tts_enable).lower())
-    pref.set("tts_voice", payload.tts_voice)
+    pref.set("kokoro_voice", payload.kokoro_voice)
+    # Keep the legacy field in sync until older clients are fully migrated.
+    pref.set("tts_voice", payload.kokoro_voice)
+    pref.set("kokoro_model_path", payload.kokoro_model_path.strip())
     pref.set("tts_speed", str(payload.tts_speed))
     pref.set("do_not_disturb_start", payload.do_not_disturb_start)
     pref.set("do_not_disturb_end", payload.do_not_disturb_end)
@@ -221,7 +243,12 @@ async def get_milestones() -> ApiResponse[list[MilestoneResponse]]:
 @router.post("/memory/milestones", response_model=ApiResponse[MilestoneResponse])
 async def create_milestone(payload: MilestoneCreate) -> ApiResponse[MilestoneResponse]:
     from datetime import datetime
-    occurred = datetime.fromisoformat(payload.occurred_at) if payload.occurred_at else None
+    occurred = None
+    if payload.occurred_at:
+        try:
+            occurred = datetime.fromisoformat(payload.occurred_at)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid occurred_at format: {payload.occurred_at}")
     store = MilestoneStore()
     m = store.add(event_type=payload.event_type, title=payload.title, description=payload.description, occurred_at=occurred)
     return ApiResponse(data=MilestoneResponse(

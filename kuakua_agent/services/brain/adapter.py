@@ -11,9 +11,12 @@ logger = get_logger(__name__)
 class ModelAdapter:
     def __init__(self):
         pref = PreferenceStore()
-        self.base_url = settings.ark_base_url
-        self.api_key = pref.get("model_api_key") or settings.ark_api_key
-        self.model_id = settings.ark_model_id
+        self.base_url = settings.llm_base_url.rstrip("/")
+        raw_key = pref.get("model_api_key") or settings.llm_api_key
+        self.api_key = raw_key.strip() if raw_key else ""
+        if not self.api_key:
+            raise ValueError("API key is not configured. Please set LLM_API_KEY or model_api_key.")
+        self.model_id = settings.llm_model_id.strip()
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -141,7 +144,6 @@ class ModelAdapter:
                         except UnicodeDecodeError:
                             decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
                             decoded_line = decoder.decode(line)
-                            decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
 
                         if not decoded_line.startswith("data: "):
                             continue
