@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
+import logging
 
 from fastapi import APIRouter, HTTPException, Request, Response
 import httpx
 
+from kuakua_agent.services.monitor.activitywatch.client import ActivityWatchClient
 from kuakua_agent.services.settings_service import get_settings_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["activitywatch-proxy"])
 
@@ -66,12 +71,11 @@ async def get_aw_status():
     """
     获取 ActivityWatch 连接状态
     """
-    from kuakua_agent.services.monitor.activitywatch.client import ActivityWatchClient
-
     client = ActivityWatchClient()
     buckets = client.get_buckets()
 
     if not buckets:
+        logger.warning("ActivityWatch: 无法获取 buckets，服务可能未运行或无法连接")
         return {
             "status": "disconnected",
             "last_sync": None,
@@ -80,14 +84,23 @@ async def get_aw_status():
 
     # 获取最后事件时间作为 last_sync
     main_buckets = client.get_main_buckets()
+
+    async def fetch_last_event(bucket_id: str) -> datetime | None:
+        """在独立线程中获取单个 bucket 的最后事件时间"""
+        try:
+            events = await asyncio.to_thread(client.get_events, bucket_id, limit=1)
+        except Exception:
+            return None
+        if not events:
+            return None
+        return datetime.fromisoformat(events[0]["timestamp"].replace("Z", "+00:00"))
+
+    # 并行获取所有 bucket 的最后事件
+    bucket_ids = [bid for bid in main_buckets.values() if bid]
     last_sync = None
-    for bucket_id in main_buckets.values():
-        if bucket_id:
-            events = client.get_events(bucket_id, limit=1)
-            if events:
-                event_time = datetime.fromisoformat(events[0]["timestamp"].replace("Z", "+00:00"))
-                if last_sync is None or event_time > last_sync:
-                    last_sync = event_time
+    for event_time in await asyncio.gather(*[fetch_last_event(bid) for bid in bucket_ids]):
+        if event_time and (last_sync is None or event_time > last_sync):
+            last_sync = event_time
 
     return {
         "status": "connected",
