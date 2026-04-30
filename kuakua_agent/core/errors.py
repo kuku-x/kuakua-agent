@@ -12,3 +12,8 @@ class AppError(Exception):
 
     def __str__(self) -> str:
         return f"{self.code}: {self.message}"
+
+
+class NoApiKeyError(Exception):
+    """API Key 未配置时的特定异常"""
+    pass
