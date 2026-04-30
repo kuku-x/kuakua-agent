@@ -24,3 +24,9 @@ class ActivityWatchStatusResponse(BaseModel):
     connected: bool
     bucket_count: int = Field(ge=0)
     message: str
+
+
+class AwStatusResponse(BaseModel):
+    status: str
+    last_sync: str | None = None
+    error: str | None = None

@@ -53,6 +53,7 @@ export interface SummaryData {
   focus_score: number
   praise_text: string
   suggestions: string[]
+  anomalies: string[]
   computer_hours?: number
   phone_hours?: number
   phone_device_ids?: string[]
@@ -171,4 +172,29 @@ export interface PhoneSyncResponse {
   success: boolean
   synced_count: number
   message: string
+}
+
+// ============ 每周复盘 ============
+
+export interface WeeklyReviewStats {
+  total_hours: number
+  work_hours: number
+  entertainment_hours: number
+  other_hours: number
+  day_count: number
+  week_start: string
+  week_end: string
+}
+
+export interface WeeklyReviewDay {
+  date: string
+  total: number
+  work: number
+  entertainment: number
+}
+
+export interface WeeklyReviewData {
+  review: string
+  stats: WeeklyReviewStats
+  daily: WeeklyReviewDay[]
 }

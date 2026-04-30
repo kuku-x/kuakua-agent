@@ -12,8 +12,15 @@ async def gather_context_node(state: PraiseState) -> PraiseState:
     context_builder = ContextBuilder()
     weather = WeatherService()
 
-    trigger_type = state.get("milestone", {}).get("event_type", "scheduled")
-    env_context = str(state.get("milestone", {}))
+    milestone = state.get("milestone", {})
+    trigger_type = milestone.get("event_type", "scheduled")
+
+    # Build env_context string with trend data if available
+    parts = [str(milestone.get("data", {}))]
+    trend = milestone.get("trend", "")
+    if trend:
+        parts.append(f"\n近期趋势：\n{trend}")
+    env_context = "\n".join(parts)
 
     messages, context_str = await context_builder.build_proactive_context(
         trigger_type=trigger_type,

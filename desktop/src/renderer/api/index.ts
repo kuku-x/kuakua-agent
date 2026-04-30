@@ -29,11 +29,15 @@ export const getTodaySummary = () => api.get<ApiResponse<SummaryData>>('/summary
 
 export const sendChat = (data: ChatRequest) => api.post<ApiResponse<ChatResponse>>('/chat', data)
 
-export async function* sendChatStream(data: ChatRequest): AsyncGenerator<string, void, unknown> {
+export async function* sendChatStream(
+  data: ChatRequest,
+  options: { signal?: AbortSignal } = {},
+): AsyncGenerator<string, void, unknown> {
   const response = await fetch(`${API_BASE_URL}/chat/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    signal: options.signal,
   })
 
   if (!response.ok) {
@@ -103,10 +107,26 @@ export const getLatestNightlySummary = () =>
 export const markNightlySummaryRead = () =>
   api.post<ApiResponse<{ ok: boolean }>>('/usage/nightly-summary/mark-read')
 
+export const getNightlySummaryHistory = (days = 7) =>
+  api.get<ApiResponse<Array<{ date: string; content: string }>>>(
+    '/usage/nightly-summary/history',
+    { params: { days } },
+  )
+
 export const listTtsVoices = (engine: string) =>
   api.get<ApiResponse<Array<{ id: string; title: string; tags?: string[] }>>>(
     '/settings/praise/tts/voices',
     { params: { engine } },
+  )
+
+export const getAppCategories = () =>
+  api.get<ApiResponse<Record<string, string>>>('/settings/app-categories')
+
+export const updateAppCategory = (appName: string, category: string) =>
+  api.put<ApiResponse<Record<string, string>>>(
+    '/settings/app-categories',
+    null,
+    { params: { app_name: appName, category } },
   )
 
 export default api

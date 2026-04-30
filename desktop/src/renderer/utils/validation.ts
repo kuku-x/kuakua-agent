@@ -116,6 +116,7 @@ export function normalizeSummary(value: unknown): SummaryData {
     focus_score: Math.min(100, asNumber(item.focus_score)),
     praise_text: asString(item.praise_text, '暂无总结'),
     suggestions: asStringArray(item.suggestions),
+    anomalies: asStringArray(item.anomalies),
     computer_hours: asNumber(item.computer_hours),
     phone_hours: asNumber(item.phone_hours),
     phone_device_ids: asStringArray(item.phone_device_ids),
@@ -151,6 +152,6 @@ export function normalizeSettings(value: unknown): SettingsResponse {
     aw_server_url: asString(item.aw_server_url, 'http://127.0.0.1:5600'),
     data_masking: Boolean(item.data_masking),
     doubao_api_key_set: Boolean(item.doubao_api_key_set),
-    fish_audio_api_key_set: Boolean((item as any).fish_audio_api_key_set),
+    fish_audio_api_key_set: Boolean(item['fish_audio_api_key_set']),
   }
 }

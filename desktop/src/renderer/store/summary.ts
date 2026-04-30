@@ -149,38 +149,50 @@ export const useSummaryStore = defineStore('summary', () => {
   const summary = ref<SummaryData | null>(loadCachedSummary())
   const loading = ref(false)
   const error = ref<string | null>(null)
+  // 请求去重：缓存正在飞行中的 Promise，防止并发重复请求
+  let fetchTodayPromise: Promise<void> | null = null
 
   async function fetchTodaySummary() {
+    // 如果已有请求在进行中，直接返回同一个 Promise
+    if (fetchTodayPromise) {
+      return fetchTodayPromise
+    }
+    if (loading.value) return
+
     loading.value = true
     error.value = null
-    try {
-      const [summaryResponse, aggregateResponse] = await Promise.all([
-        getTodaySummary(),
-        fetchAggregatedUsage(getTodayDateString()),
-      ])
+    fetchTodayPromise = (async () => {
+      try {
+        const [summaryResponse, aggregateResponse] = await Promise.all([
+          getTodaySummary(),
+          fetchAggregatedUsage(getTodayDateString()),
+        ])
 
-      if (summaryResponse.data.status === 'success' && summaryResponse.data.data) {
-        const baseSummary = normalizeSummary(summaryResponse.data.data)
-        const nextSummary =
-          aggregateResponse.data.status === 'success' && aggregateResponse.data.data
-            ? mergeSummaryWithAggregate(baseSummary, aggregateResponse.data.data)
-            : baseSummary
-        const cachedSummary = loadCachedSummary()
+        if (summaryResponse.data.status === 'success' && summaryResponse.data.data) {
+          const baseSummary = normalizeSummary(summaryResponse.data.data)
+          const nextSummary =
+            aggregateResponse.data.status === 'success' && aggregateResponse.data.data
+              ? mergeSummaryWithAggregate(baseSummary, aggregateResponse.data.data)
+              : baseSummary
+          const cachedSummary = loadCachedSummary()
 
-        if (shouldUseCachedSummary(cachedSummary, nextSummary)) {
-          summary.value = cachedSummary
+          if (shouldUseCachedSummary(cachedSummary, nextSummary)) {
+            summary.value = cachedSummary
+          } else {
+            summary.value = nextSummary
+            saveCachedSummary(nextSummary)
+          }
         } else {
-          summary.value = nextSummary
-          saveCachedSummary(nextSummary)
+          error.value = summaryResponse.data.message || '获取总结失败'
         }
-      } else {
-        error.value = summaryResponse.data.message || '获取总结失败'
+      } catch (e: unknown) {
+        error.value = handleApiError(e)
+      } finally {
+        loading.value = false
+        fetchTodayPromise = null
       }
-    } catch (e: unknown) {
-      error.value = handleApiError(e)
-    } finally {
-      loading.value = false
-    }
+    })()
+    return fetchTodayPromise
   }
 
   async function fetchSummary(date: string) {

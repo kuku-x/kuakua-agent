@@ -1,6 +1,19 @@
 <template>
   <section class="chat-page">
     <div v-if="store.messages.length === 0" class="chat-page__welcome">
+      <KuCard v-if="!apiKeySet" padding="md" class="chat-page__key-banner">
+        <div class="chat-page__key-row">
+          <span class="chat-page__key-icon">🔑</span>
+          <div>
+            <strong>尚未配置大模型 API Key</strong>
+            <p>配置后可以使用 AI 聊天、晚间总结和智能夸夸功能。</p>
+          </div>
+          <KuButton size="sm" variant="primary" @click="router.push('/settings')">
+            去设置
+          </KuButton>
+        </div>
+      </KuCard>
+
       <KuCard padding="lg" class="chat-page__hero">
         <div>
           <p class="chat-page__eyebrow">Companion Mode</p>
@@ -58,7 +71,7 @@
         <div class="chat-page__panel-head">
           <div>
             <p class="chat-page__eyebrow">Quick Start</p>
-            <h3>选择一种模式</h3>
+            <h3>选一种方式开始</h3>
           </div>
         </div>
 
@@ -156,6 +169,8 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { getSettings } from '@/api'
 import KuButton from '@/components/base/KuButton.vue'
 import KuCard from '@/components/base/KuCard.vue'
 import { useChatStore } from '@/store/chat'
@@ -163,6 +178,8 @@ import { useSummaryStore } from '@/store/summary'
 
 const store = useChatStore()
 const summaryStore = useSummaryStore()
+const router = useRouter()
+const apiKeySet = ref(true)
 const inputMessage = ref('')
 const messagesRef = ref<HTMLElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
@@ -185,9 +202,19 @@ const starterPrompts = [
   },
 ]
 
+async function checkApiKey() {
+  try {
+    const res = await getSettings()
+    apiKeySet.value = res.data.doubao_api_key_set
+  } catch {
+    apiKeySet.value = true
+  }
+}
+
 onMounted(() => {
+  void checkApiKey()
   if (!summaryStore.summary && !summaryStore.loading) {
-    summaryStore.fetchTodaySummary()
+    void summaryStore.fetchTodaySummary()
   }
 
   if (store.draft) {
@@ -210,7 +237,7 @@ watch(
 )
 
 watch(
-  () => store.messages.map((msg) => `${msg.id}:${msg.content.length}:${msg.status}`).join('|'),
+  () => store.messages.length,
   async () => {
     await nextTick()
     scrollToBottom()
@@ -584,6 +611,35 @@ function formatTime(date: Date) {
 
 .chat-page__textarea::placeholder {
   color: var(--color-text-tertiary);
+}
+
+.chat-page__key-banner {
+  margin-bottom: var(--space-4);
+  background:
+    linear-gradient(135deg, rgba(212, 168, 75, 0.12), rgba(201, 138, 105, 0.08)),
+    var(--color-bg-card);
+  border-color: rgba(212, 168, 75, 0.2);
+}
+
+.chat-page__key-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.chat-page__key-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.chat-page__key-row strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.chat-page__key-row p {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .chat-page__footnote {

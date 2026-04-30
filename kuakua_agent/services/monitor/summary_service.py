@@ -129,6 +129,12 @@ class SummaryService:
             if seconds >= 60
         ][:5]
 
+        # Detect anomalies compared to 7-day baseline
+        from kuakua_agent.services.monitor.anomaly_detector import AnomalyDetector
+        anomalies = [
+            a.message for a in AnomalyDetector().detect(target_date)
+        ]
+
         return SummaryResponse(
             date=target_date,
             total_hours=total_hours,
@@ -148,6 +154,7 @@ class SummaryService:
                 focus_score=focus_score,
                 top_apps=top_apps,
             ),
+            anomalies=anomalies,
         )
 
     def generate_praise_and_suggestions(

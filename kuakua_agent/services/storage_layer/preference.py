@@ -26,6 +26,7 @@ class PreferenceStore:
         "praise_last_triggered_at": "",
         "praise_last_date": "",
         "praise_daily_count": "0",
+        "app_categories": "{}",
     }
 
     def __init__(self, db: Database | None = None):

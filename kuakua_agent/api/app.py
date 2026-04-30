@@ -45,6 +45,13 @@ def create_app() -> FastAPI:
         db = get_database()
         await db.init_db()
 
+        # Load custom app categories into the shared guess_category cache
+        from kuakua_agent.utils.shared import load_custom_categories
+        from kuakua_agent.services.storage_layer import PreferenceStore
+        pref = PreferenceStore()
+        raw = await pref.get("app_categories") or "{}"
+        load_custom_categories(raw)
+
         scheduler = PraiseScheduler()
         await scheduler.start()
 

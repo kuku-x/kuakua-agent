@@ -21,6 +21,7 @@ export interface ChatSession {
 }
 
 const DEFAULT_CHAT_TITLE = 'New conversation'
+const MAX_SESSIONS = 50
 
 function createSession(): ChatSession {
   const now = new Date()
@@ -78,6 +79,10 @@ export const useChatStore = defineStore('chat', () => {
   function resetChat() {
     const nextSession = createSession()
     sessions.value.unshift(nextSession)
+    // 防止会话无限增长
+    if (sessions.value.length > MAX_SESSIONS) {
+      sessions.value = sessions.value.slice(0, MAX_SESSIONS)
+    }
     activeChatId.value = nextSession.id
     error.value = null
   }

@@ -42,9 +42,40 @@ _ENTERTAINMENT_KEYWORDS: frozenset[str] = frozenset({
 })
 
 
+_custom_categories: dict[str, str] = {}
+
+
+def load_custom_categories(raw_json: str) -> None:
+    """Load custom app→category mappings (typically from preferences)."""
+    import json as _json
+    try:
+        data = _json.loads(raw_json)
+        if isinstance(data, dict):
+            _custom_categories.clear()
+            for k, v in data.items():
+                if v in ("work", "entertainment", "other"):
+                    _custom_categories[k.lower()] = v
+    except Exception:
+        pass
+
+
 def guess_category(app_name: str) -> str:
-    """Return ``"work"``, ``"entertainment"`` or ``"other"`` for a given app name."""
+    """Return ``"work"``, ``"entertainment"`` or ``"other"`` for a given app name.
+
+    Custom categories set by the user take priority over built-in keywords.
+    """
     lowered = app_name.lower()
+
+    # 1. User-defined custom mapping
+    if lowered in _custom_categories:
+        return _custom_categories[lowered]
+
+    # Strip .exe for matching
+    key = lowered[:-4] if lowered.endswith(".exe") else lowered
+    if key in _custom_categories:
+        return _custom_categories[key]
+
+    # 2. Built-in keyword matching
     if any(kw in lowered for kw in _ENTERTAINMENT_KEYWORDS):
         return "entertainment"
     if any(kw in lowered for kw in _WORK_KEYWORDS):

@@ -37,7 +37,11 @@ def _get_summary_service() -> SummaryService:
 
 @router.get("/health", response_model=ApiResponse[dict[str, str]])
 async def health_check() -> ApiResponse[dict[str, str]]:
-    return ApiResponse(data={"status": "ok"})
+    api_configured = bool(settings.llm_api_key or PreferenceStore().get_sync("model_api_key"))
+    return ApiResponse(data={
+        "status": "ok",
+        "api_configured": str(api_configured).lower(),
+    })
 
 
 @router.get("/integrations", response_model=ApiResponse[IntegrationSummaryResponse])
@@ -131,9 +135,69 @@ async def get_today_summary() -> ApiResponse[SummaryResponse]:
     return ApiResponse(data=_get_summary_service().get_today_summary())
 
 
+# ⚠️ /summary/timeline 必须在 /summary/{date} 之前注册，
+# 否则 FastAPI 会将 "timeline" 匹配为 {date} 参数。
+@router.get("/summary/timeline", response_model=ApiResponse[list[dict]])
+async def get_timeline(date: str | None = None):
+    """Return today's window events as a time-ordered timeline."""
+    try:
+        target = date or datetime.now().strftime("%Y-%m-%d")
+        svc = _get_summary_service()
+        day = datetime.strptime(target, "%Y-%m-%d").date()
+        from datetime import time, timedelta
+        start_local = datetime.combine(day, time.min, tzinfo=svc._local_tz)
+        end_local = start_local + timedelta(days=1)
+        start_utc = start_local.astimezone(timezone.utc)
+        end_utc = end_local.astimezone(timezone.utc)
+
+        buckets = svc._client.get_main_buckets()
+        window_bucket = buckets.get("window")
+        if not window_bucket:
+            return ApiResponse(data=[])
+
+        events = svc._client.get_events(window_bucket, start=start_utc, end=end_utc, limit=5000)
+        timeline: list[dict] = []
+        for e in events:
+            ts = e.get("timestamp")
+            dur = float(e.get("duration", 0) or 0)
+            if not ts or dur <= 1:
+                continue
+            try:
+                t = datetime.fromisoformat(ts)
+            except ValueError:
+                continue
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=timezone.utc)
+            t_local = t.astimezone(svc._local_tz)
+            app = (e.get("data", {}) or {}).get("app", "") or "Unknown"
+            title = (e.get("data", {}) or {}).get("title", "") or ""
+            timeline.append({
+                "time": t_local.strftime("%H:%M"),
+                "hour": t_local.hour,
+                "app": normalize_app_name(app),
+                "duration_seconds": round(dur),
+                "category": guess_category(app),
+                "title": title[:80] if title else "",
+            })
+
+        timeline.sort(key=lambda x: x["time"])
+        return ApiResponse(data=timeline)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取时间线失败: {str(e)}")
+
+
 @router.get("/summary/{date}", response_model=ApiResponse[SummaryResponse])
 async def get_summary(date: str) -> ApiResponse[SummaryResponse]:
     return ApiResponse(data=_get_summary_service().get_summary(date))
+
+
+@router.get("/weekly-review", response_model=ApiResponse[dict])
+async def get_weekly_review() -> ApiResponse[dict]:
+    """Generate a weekly review from the last 7 days."""
+    from kuakua_agent.services.ai_engine.weekly_review import WeeklyReviewGenerator
+    gen = WeeklyReviewGenerator()
+    result = gen.generate()
+    return ApiResponse(data=result)
 
 
 @router.get("/nightly-summary/{date}", response_model=ApiResponse[dict])
@@ -361,7 +425,74 @@ async def submit_feedback(payload: FeedbackCreate) -> ApiResponse[dict]:
     return ApiResponse(data={"recorded": True})
 
 
+# ============ 应用分类自定义 ============
+
+@router.get("/settings/app-categories")
+async def get_app_categories() -> ApiResponse[dict[str, str]]:
+    """Return custom app→category mappings set by the user."""
+    import json as _json
+    pref = PreferenceStore()
+    raw = await pref.get("app_categories") or "{}"
+    try:
+        data = _json.loads(raw)
+    except Exception:
+        data = {}
+    return ApiResponse(data=data)
+
+
+@router.put("/settings/app-categories")
+async def update_app_category(app_name: str, category: str) -> ApiResponse[dict[str, str]]:
+    """Set a custom category for an app."""
+    import json as _json
+    if category not in ("work", "entertainment", "other"):
+        raise HTTPException(status_code=400, detail="Category must be work/entertainment/other")
+    pref = PreferenceStore()
+    raw = await pref.get("app_categories") or "{}"
+    try:
+        data = _json.loads(raw)
+    except Exception:
+        data = {}
+    data[app_name.lower()] = category
+    raw = _json.dumps(data, ensure_ascii=False)
+    await pref.set("app_categories", raw)
+
+    # Reload the in-memory cache so guess_category picks up changes immediately
+    from kuakua_agent.utils.shared import load_custom_categories
+    load_custom_categories(raw)
+
+    return ApiResponse(data=data)
+
+
 # ============ 调试 / 测试 ============
+
+@router.post("/debug/test-tts")
+async def test_tts_voice(text: str = "你好，这是夸夸语音测试。"):
+    """Test TTS playback with detailed diagnostics. Returns per-channel results."""
+    from kuakua_agent.services.notification import FallbackTTS, SystemNotifier, OutputManager
+    from kuakua_agent.services.storage_layer import PreferenceStore
+
+    pref = PreferenceStore()
+    tts_enabled = await pref.get_bool("tts_enable")
+    tts_engine = await pref.get("tts_engine") or "kokoro"
+    fish_key = bool(await pref.get("fish_audio_api_key") or settings.fish_audio_api_key)
+    fish_voice = await pref.get("fish_audio_voice_id") or ""
+    kokoro_voice = await pref.get("kokoro_voice") or "zf_001"
+
+    tts = FallbackTTS()
+    result = await tts.send(text)
+
+    return {
+        "success": result.success,
+        "error": result.error,
+        "config": {
+            "tts_enabled": tts_enabled,
+            "tts_engine": tts_engine,
+            "fish_key_set": fish_key,
+            "fish_voice_id": fish_voice or "(未设置)",
+            "kokoro_voice": kokoro_voice,
+        },
+    }
+
 
 @router.post("/debug/trigger-praise")
 async def trigger_praise_test(

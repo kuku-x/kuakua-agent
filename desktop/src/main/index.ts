@@ -3,11 +3,19 @@ import { join } from 'path'
 
 let mainWindow: BrowserWindow | null = null
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL || 'http://localhost:5175'
+const WINDOW_ICON_NAME = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+const WINDOW_ICON_PATH = app.isPackaged
+  ? join(process.resourcesPath, 'build', WINDOW_ICON_NAME)
+  : join(app.getAppPath(), 'build', WINDOW_ICON_NAME)
 
 // Some Windows environments may deny default cache directory access in dev mode.
 if (!app.isPackaged) {
   const devUserDataPath = join(app.getPath('temp'), 'kuakua-agent-dev')
   app.setPath('userData', devUserDataPath)
+}
+
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.kuakua.app')
 }
 
 function createWindow() {
@@ -23,7 +31,8 @@ function createWindow() {
       sandbox: true,
       webSecurity: true,
     },
-    title: '夸夸Agent',
+    icon: WINDOW_ICON_PATH,
+    title: '夸夸',
   })
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
@@ -60,7 +69,6 @@ app.on('activate', () => {
   }
 })
 
-// IPC示例
 ipcMain.handle('get-app-version', () => {
   return app.getVersion()
 })

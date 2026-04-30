@@ -38,7 +38,18 @@
     "files": [
       "dist/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "build/icon.png"
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "build/icon.ico"
+      }
+    ],
     "win": {
+      "icon": "build/icon.ico",
       "target": "portable",
       "sign": false
     }

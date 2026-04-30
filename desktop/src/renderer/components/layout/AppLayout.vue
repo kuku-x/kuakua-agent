@@ -46,14 +46,14 @@
         <section v-if="nightlySummary" class="nightly-summary-card">
           <div class="nightly-summary-card__head">
             <div>
-              <p class="nightly-summary-card__eyebrow">Tonight Summary</p>
-              <h2>Nightly summary is ready</h2>
+              <p class="nightly-summary-card__eyebrow">Nightly Summary</p>
+              <h2>今晚总结已生成</h2>
             </div>
 
             <button
               class="nightly-summary-card__dismiss"
               type="button"
-              aria-label="Dismiss nightly summary"
+              aria-label="关闭晚间总结提醒"
               @click="dismissNightlySummary"
             >
               ×
@@ -64,8 +64,11 @@
           <p class="nightly-summary-card__content">{{ nightlySummary.content }}</p>
 
           <div class="nightly-summary-card__actions">
-            <button class="nightly-summary-card__action" type="button" @click="dismissNightlySummary">
-              Mark as read
+            <RouterLink to="/nightly-summary" class="nightly-summary-card__action">
+              查看完整总结
+            </RouterLink>
+            <button class="nightly-summary-card__dismiss-link" type="button" @click="dismissNightlySummary">
+              标记已读
             </button>
           </div>
         </section>
@@ -82,26 +85,26 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getLatestNightlySummary, markNightlySummaryRead } from '@/api'
-import GlobalError from '@/components/widgets/GlobalError.vue'
+import { reportGlobalError } from '@/utils/error'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import SettingsPanel from '@/components/settings/SettingsPanel.vue'
 import SettingsTrigger from '@/components/settings/SettingsTrigger.vue'
+import GlobalError from '@/components/widgets/GlobalError.vue'
+import { useWebSocket } from '@/hooks/useWebSocket'
 import { useChatStore } from '@/store/chat'
 import { useSummaryStore } from '@/store/summary'
-import { useWebSocket } from '@/hooks/useWebSocket'
 import type { NightlySummary } from '@/types/api'
 
 const route = useRoute()
 const chatStore = useChatStore()
 const summaryStore = useSummaryStore()
-
 const { on } = useWebSocket()
 
-// Listen for proactive praise pushes from backend scheduler
-on('praise_push', (event) => {
+// 保存取消订阅函数，组件卸载时清理
+const unsubPraise = on('praise_push', (event) => {
   if (event.type === 'praise_push') {
     window.electronAPI?.showSystemNotification?.({
-      title: '夸夸 Agent',
+      title: '夸夸',
       body: event.data.content,
     })
   }
@@ -112,15 +115,15 @@ const mobileSidebarOpen = ref(false)
 const settingsOpen = ref(false)
 const nightlySummary = ref<NightlySummary | null>(null)
 const notifiedNightlyDate = ref('')
-let nightlySummaryPoller: number | null = null
+let nightlySummaryTimer: ReturnType<typeof setTimeout> | null = null
+let nightlyLoading = false
 
-const currentEyebrow = computed(() => {
-  if (route.path === '/chat') return '陪伴聊天'
-  return '每日摘要'
-})
+const currentEyebrow = computed(() => (route.path === '/chat' ? '陪伴聊天' : '每日摘要'))
 
 const currentHeading = computed(() => {
-  if (route.path === '/chat') return chatStore.activeSession?.title || '开始一段新对话'
+  if (route.path === '/chat') {
+    return chatStore.activeSession?.title || '开始一段新对话'
+  }
   return '看看今天的专注、放松与节奏'
 })
 
@@ -157,20 +160,22 @@ watch(
 )
 
 onMounted(() => {
+  // 只在 summary 确实为空且未在加载中才请求，避免与子页面重复
   if (!summaryStore.summary && !summaryStore.loading) {
     summaryStore.fetchTodaySummary()
   }
 
   void syncNightlySummary()
-  nightlySummaryPoller = window.setInterval(() => {
-    void syncNightlySummary()
-  }, 30000)
+  scheduleNextNightlyPoll()
 })
 
 onUnmounted(() => {
-  if (nightlySummaryPoller !== null) {
-    window.clearInterval(nightlySummaryPoller)
-    nightlySummaryPoller = null
+  // 清理 WebSocket 监听器
+  unsubPraise?.()
+  // 清理定时器
+  if (nightlySummaryTimer !== null) {
+    clearTimeout(nightlySummaryTimer)
+    nightlySummaryTimer = null
   }
 })
 
@@ -183,23 +188,40 @@ function handleSidebarToggle() {
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
 
+function scheduleNextNightlyPoll() {
+  if (nightlySummaryTimer !== null) {
+    clearTimeout(nightlySummaryTimer)
+  }
+  nightlySummaryTimer = setTimeout(() => {
+    void syncNightlySummary()
+  }, 30000)
+}
+
 async function syncNightlySummary() {
+  // 防止并发请求
+  if (nightlyLoading) {
+    scheduleNextNightlyPoll()
+    return
+  }
+  nightlyLoading = true
   try {
     const response = await getLatestNightlySummary()
     const latest = response.data.data
     nightlySummary.value = latest?.unread ? latest : null
 
-    if (!latest?.unread || notifiedNightlyDate.value === latest.date) {
-      return
+    if (latest?.unread && notifiedNightlyDate.value !== latest.date) {
+      notifiedNightlyDate.value = latest.date
+      window.electronAPI?.showSystemNotification?.({
+        title: '夸夸',
+        body: latest.content,
+      })
     }
-
-    notifiedNightlyDate.value = latest.date
-    await window.electronAPI?.showSystemNotification?.({
-      title: 'Kuakua nightly summary is ready',
-      body: latest.content,
-    })
   } catch (error: unknown) {
     console.error('Failed to sync nightly summary:', error)
+    reportGlobalError('晚间总结同步失败，请检查后端服务')
+  } finally {
+    nightlyLoading = false
+    scheduleNextNightlyPoll()
   }
 }
 
@@ -403,11 +425,9 @@ async function dismissNightlySummary() {
   white-space: pre-wrap;
 }
 
-.nightly-summary-card__actions {
-  margin-top: var(--space-4);
-}
-
 .nightly-summary-card__action {
+  display: inline-flex;
+  align-items: center;
   min-height: 40px;
   padding: 0 var(--space-4);
   color: #fff;
@@ -416,6 +436,24 @@ async function dismissNightlySummary() {
   background: var(--color-accent);
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-xs);
+  text-decoration: none;
+}
+
+.nightly-summary-card__dismiss-link {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+.nightly-summary-card__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
 
 .mobile-only {

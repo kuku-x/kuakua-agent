@@ -20,6 +20,39 @@
       <KuButton @click="openEncouragementChat">让夸夸鼓励我一下</KuButton>
     </div>
 
+    <KuCard v-if="awStatus && !awStatus.connected && !store.summary" padding="lg" class="summary-page__aw-banner">
+      <div class="summary-page__aw-head">
+        <span class="summary-page__aw-dot summary-page__aw-dot--off"></span>
+        <strong>ActivityWatch 未连接</strong>
+      </div>
+      <p class="summary-page__aw-desc">
+        夸夸需要 ActivityWatch 来记录你的电脑使用数据。请确保 ActivityWatch 已启动并正在运行。
+      </p>
+      <div class="summary-page__aw-guide">
+        <p>如何启动：</p>
+        <ol>
+          <li>打开 <code>{{ awStatus?.aw_server_url || 'http://localhost:5600' }}</code></li>
+          <li>确认页面能正常打开并显示数据</li>
+          <li>返回此页面并点击下方按钮重新检测</li>
+        </ol>
+      </div>
+      <div class="summary-page__aw-actions">
+        <KuButton size="sm" @click="checkAwStatus">重新检测</KuButton>
+        <a :href="awStatus?.aw_server_url || 'http://localhost:5600'" target="_blank" class="summary-page__aw-link">
+          打开 ActivityWatch →
+        </a>
+      </div>
+    </KuCard>
+
+    <KuCard v-else-if="awStatus?.connected && !store.loading && !store.summary" padding="lg" class="summary-page__state">
+      <div class="summary-page__aw-head">
+        <span class="summary-page__aw-dot summary-page__aw-dot--on"></span>
+        <strong>ActivityWatch 已连接</strong>
+        <span class="summary-page__aw-meta">共 {{ awStatus.bucket_count }} 个数据桶</span>
+      </div>
+      <KuSpinner text="正在整理今天的摘要数据..." />
+    </KuCard>
+
     <KuCard v-if="store.loading" class="summary-page__state">
       <KuSpinner text="正在整理今天的摘要数据..." />
     </KuCard>
@@ -76,9 +109,15 @@
                 </div>
                 <div class="summary-page__app-meta">
                   <span>{{ formatDuration(app.duration) }}</span>
-                  <span class="summary-page__app-tag" :class="`summary-page__app-tag--${app.category}`">
-                    {{ formatCategoryTag(app.category) }}
-                  </span>
+                  <button
+                    class="summary-page__app-tag"
+                    :class="`summary-page__app-tag--${getCategory(app.name, app.category)}`"
+                    type="button"
+                    :title="`点击切换分类：${getCategory(app.name, app.category)}`"
+                    @click.stop="cycleCategory(app.name, app.category)"
+                  >
+                    {{ formatCategoryTag(getCategory(app.name, app.category)) }}
+                  </button>
                 </div>
               </article>
             </div>
@@ -100,9 +139,15 @@
                 </div>
                 <div class="summary-page__app-meta">
                   <span>{{ formatDuration(app.duration) }}</span>
-                  <span class="summary-page__app-tag" :class="`summary-page__app-tag--${app.category}`">
-                    {{ formatCategoryTag(app.category) }}
-                  </span>
+                  <button
+                    class="summary-page__app-tag"
+                    :class="`summary-page__app-tag--${getCategory(app.name, app.category)}`"
+                    type="button"
+                    :title="`点击切换分类：${getCategory(app.name, app.category)}`"
+                    @click.stop="cycleCategory(app.name, app.category)"
+                  >
+                    {{ formatCategoryTag(getCategory(app.name, app.category)) }}
+                  </button>
                 </div>
               </article>
             </div>
@@ -111,6 +156,8 @@
           </section>
         </div>
       </KuCard>
+
+      <TimelineCard />
     </div>
 
     <KuCard v-else class="summary-page__state">
@@ -120,23 +167,61 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getActivityWatchStatus, getAppCategories, updateAppCategory } from '@/api'
 import KuButton from '@/components/base/KuButton.vue'
 import KuCard from '@/components/base/KuCard.vue'
 import KuSpinner from '@/components/base/KuSpinner.vue'
 import SummaryCard from '@/components/business/SummaryCard.vue'
-import TimePieChart from '@/components/widgets/TimePieChart.vue'
+import TimelineCard from '@/components/business/TimelineCard.vue'
 import WeatherCard from '@/components/business/WeatherCard.vue'
+import TimePieChart from '@/components/widgets/TimePieChart.vue'
 import { useHitokoto } from '@/hooks/useHitokoto'
 import { useChatStore } from '@/store/chat'
 import { useSummaryStore } from '@/store/summary'
+import type { ActivityWatchStatus } from '@/types/api'
 import { formatDuration } from '@/utils/format'
 
 const store = useSummaryStore()
 const chatStore = useChatStore()
 const router = useRouter()
 const { quote, fetchQuote, refreshQuote } = useHitokoto()
+const awStatus = ref<ActivityWatchStatus | null>(null)
+const customCategories = ref<Record<string, string>>({})
+
+function getCategory(appName: string, defaultCat: string) {
+  const key = appName.toLowerCase().replace('.exe', '')
+  return customCategories.value[key] || defaultCat
+}
+
+const CYCLE: Record<string, string> = { work: 'entertainment', entertainment: 'other', other: 'work' }
+
+async function cycleCategory(appName: string, currentCat: string) {
+  const effective = getCategory(appName, currentCat)
+  const next = CYCLE[effective] || 'work'
+  try {
+    await updateAppCategory(appName, next)
+    const key = appName.toLowerCase().replace('.exe', '')
+    customCategories.value = { ...customCategories.value, [key]: next }
+  } catch {}
+}
+
+async function loadCustomCategories() {
+  try {
+    const res = await getAppCategories()
+    customCategories.value = res.data.data || {}
+  } catch {}
+}
+
+async function checkAwStatus() {
+  try {
+    const res = await getActivityWatchStatus()
+    awStatus.value = res.data.data
+  } catch {
+    awStatus.value = null
+  }
+}
 
 const quoteText = computed(() => quote.value?.hitokoto || '今天已经很棒了，记得给自己一个微笑。')
 const quoteFrom = computed(() => {
@@ -188,14 +273,16 @@ const phoneUsage = computed(() => {
 })
 
 onMounted(() => {
+  void loadCustomCategories()
+  void checkAwStatus()
   if (!store.summary && !store.loading) {
-    store.fetchTodaySummary()
+    void store.fetchTodaySummary()
   }
-  fetchQuote()
+  void fetchQuote()
 })
 
 function refresh() {
-  store.fetchTodaySummary()
+  void store.fetchTodaySummary()
 }
 
 async function handleRefreshQuote() {
@@ -266,12 +353,12 @@ function openEncouragementChat() {
 }
 
 .summary-page__quote {
+  margin-top: var(--space-2);
+  color: var(--color-text-primary);
   font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  font-weight: var(--font-weight-normal);
   line-height: 1.5;
   letter-spacing: -0.02em;
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-normal);
-  margin-top: var(--space-2);
 }
 
 .summary-page__quote-from {
@@ -293,6 +380,95 @@ function openEncouragementChat() {
   flex-wrap: wrap;
 }
 
+.summary-page__aw-banner {
+  background:
+    radial-gradient(circle at top right, rgba(192, 96, 80, 0.06), transparent 40%),
+    var(--color-bg-card);
+  border-color: rgba(192, 96, 80, 0.16);
+}
+
+.summary-page__aw-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.summary-page__aw-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.summary-page__aw-dot--on {
+  background: var(--color-success);
+  box-shadow: 0 0 6px rgba(72, 152, 92, 0.5);
+}
+
+.summary-page__aw-dot--off {
+  background: var(--color-danger);
+  box-shadow: 0 0 6px rgba(192, 96, 80, 0.4);
+}
+
+.summary-page__aw-meta {
+  margin-left: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.summary-page__aw-desc {
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.summary-page__aw-guide {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
+}
+
+.summary-page__aw-guide p {
+  margin-bottom: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.summary-page__aw-guide ol {
+  padding-left: var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.summary-page__aw-guide li {
+  margin-bottom: var(--space-1);
+}
+
+.summary-page__aw-guide code {
+  padding: 1px 6px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
+.summary-page__aw-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.summary-page__aw-link {
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.summary-page__aw-link:hover {
+  text-decoration: underline;
+}
+
 .summary-page__state {
   display: flex;
   min-height: 220px;
@@ -300,8 +476,8 @@ function openEncouragementChat() {
   align-items: center;
   justify-content: center;
   gap: var(--space-4);
-  text-align: center;
   color: var(--color-text-secondary);
+  text-align: center;
 }
 
 .summary-page__state--error {
@@ -438,7 +614,16 @@ function openEncouragementChat() {
   min-height: 30px;
   padding: 0 var(--space-3);
   font-size: var(--font-size-xs);
+  font-family: inherit;
   border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.summary-page__app-tag:hover {
+  filter: brightness(0.9);
+  transform: scale(1.04);
 }
 
 .summary-page__app-tag--work {

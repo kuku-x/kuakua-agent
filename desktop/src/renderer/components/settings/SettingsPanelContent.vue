@@ -1,6 +1,5 @@
 <template>
   <div class="settings-sheet">
-    <!-- 侧边栏 -->
     <nav class="settings-nav">
       <button
         v-for="item in navItems"
@@ -15,25 +14,21 @@
       </button>
     </nav>
 
-    <!-- 内容区 -->
     <div class="settings-content">
-
-      <!-- ==================== 偏好设置 ==================== -->
       <section v-show="activeTab === 'preference'" class="settings-card">
         <div class="settings-card__head">
-          <h3>基本设置</h3>
+          <h3>基础设置</h3>
         </div>
 
         <div class="settings-card__body">
-          <!-- API Key -->
           <div class="settings-card__group">
             <label class="settings-card__label">模型 API Key</label>
             <div class="settings-card__input-row">
               <div class="settings-card__input-wrap settings-card__input-wrap--icon-left">
                 <span class="settings-card__input-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
                 </span>
                 <input
@@ -44,12 +39,12 @@
                 />
                 <button class="settings-card__input-action" type="button" @click="showApiKey = !showApiKey">
                   <svg v-if="!showApiKey" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
                   </svg>
                   <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
                   </svg>
                 </button>
               </div>
@@ -58,23 +53,24 @@
             </div>
             <p class="settings-card__hint">
               <span v-if="apiKeySet" class="settings-card__hint--ok">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
                 已配置密钥
               </span>
               <span v-else>用于聊天与晚间总结生成</span>
             </p>
           </div>
 
-          <!-- ActivityWatch -->
           <div class="settings-card__group">
             <label class="settings-card__label">ActivityWatch 地址</label>
             <div class="settings-card__input-row">
               <div class="settings-card__input-wrap settings-card__input-wrap--icon-left">
                 <span class="settings-card__input-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                    <line x1="8" y1="21" x2="16" y2="21"/>
-                    <line x1="12" y1="17" x2="12" y2="21"/>
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
                   </svg>
                 </span>
                 <input
@@ -88,15 +84,19 @@
                 class="settings-card__status-badge"
                 :class="awStatus?.connected ? 'settings-card__status-badge--ok' : 'settings-card__status-badge--error'"
               >
-                <svg v-if="awStatus?.connected" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg v-if="awStatus?.connected" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
                 {{ awStatusLoading ? '检测中' : awStatus?.connected ? '已连接' : '未连接' }}
               </span>
             </div>
             <p class="settings-card__hint">填写本地 ActivityWatch 服务地址</p>
           </div>
 
-          <!-- 数据脱敏 -->
           <div class="settings-card__group settings-card__group--row">
             <div class="settings-card__toggle-desc">
               <label class="settings-card__label">数据脱敏</label>
@@ -113,20 +113,22 @@
           <KuButton variant="primary" size="md" :loading="saving" @click="saveSettings">
             {{ saving ? '保存中...' : '保存设置' }}
           </KuButton>
-          <p v-if="saveMessage" class="settings-card__message" :class="saveSuccess ? 'settings-card__message--ok' : 'settings-card__message--error'">
+          <p
+            v-if="saveMessage"
+            class="settings-card__message"
+            :class="saveSuccess ? 'settings-card__message--ok' : 'settings-card__message--error'"
+          >
             {{ saveMessage }}
           </p>
         </div>
       </section>
 
-      <!-- ==================== 夸夸设置 ==================== -->
       <section v-show="activeTab === 'praise'" class="settings-card">
         <div class="settings-card__head">
           <h3>夸夸设置</h3>
         </div>
 
         <div class="settings-card__body">
-          <!-- 功能开关 -->
           <div class="settings-card__section-label">功能开关</div>
 
           <div class="settings-card__toggle-item">
@@ -162,10 +164,8 @@
             </label>
           </div>
 
-          <!-- TTS 配置 -->
           <div class="settings-card__section-label">语音播报 (TTS)</div>
 
-          <!-- TTS 引擎选择 -->
           <div class="settings-card__group">
             <label class="settings-card__label">TTS 引擎</label>
             <div class="settings-card__select-wrap">
@@ -179,7 +179,6 @@
             </p>
           </div>
 
-          <!-- Kokoro 专属设置 -->
           <template v-if="praise.tts_engine === 'kokoro'">
             <div class="settings-card__group">
               <label class="settings-card__label">模型路径</label>
@@ -201,17 +200,16 @@
               <div class="settings-card__select-wrap">
                 <select v-model="praise.kokoro_voice" class="settings-card__select">
                   <optgroup label="女声">
-                    <option v-for="v in kokoroVoices.female" :key="v" :value="v">{{ v }}</option>
+                    <option v-for="voice in kokoroVoices.female" :key="voice" :value="voice">{{ voice }}</option>
                   </optgroup>
                   <optgroup label="男声">
-                    <option v-for="v in kokoroVoices.male" :key="v" :value="v">{{ v }}</option>
+                    <option v-for="voice in kokoroVoices.male" :key="voice" :value="voice">{{ voice }}</option>
                   </optgroup>
                 </select>
               </div>
             </div>
           </template>
 
-          <!-- Fish Audio 专属设置 -->
           <template v-if="praise.tts_engine === 'fish_audio'">
             <div class="settings-card__group">
               <label class="settings-card__label">API Key</label>
@@ -227,12 +225,10 @@
                 <KuButton size="sm" @click="showFishKey = !showFishKey">
                   {{ showFishKey ? '隐藏' : '显示' }}
                 </KuButton>
-                <KuButton size="sm" variant="primary" :loading="fishKeySaving" @click="saveFishKey">
-                  保存
-                </KuButton>
+                <KuButton size="sm" variant="primary" :loading="fishKeySaving" @click="saveFishKey">保存</KuButton>
               </div>
               <p class="settings-card__hint">
-                <a href="https://fish.audio" target="_blank">fish.audio</a> 注册获取。
+                <a href="https://fish.audio" target="_blank" rel="noreferrer">fish.audio</a> 注册获取。
               </p>
             </div>
 
@@ -240,21 +236,40 @@
               <label class="settings-card__label">云端音色</label>
               <div class="settings-card__select-wrap">
                 <select v-model="praise.fish_audio_voice_id" class="settings-card__select">
-                  <option value="" disabled>选择音色…</option>
-                  <option
-                    v-for="v in fishVoices"
-                    :key="v.id"
-                    :value="v.id"
-                  >
-                    {{ v.title }}
+                  <option value="" disabled>选择音色...</option>
+                  <option v-for="voice in fishVoices" :key="voice.id" :value="voice.id">
+                    {{ voice.title }}
                   </option>
                 </select>
               </div>
               <p class="settings-card__hint">
-                {{ fishVoices.length }} 个可用音色。运行 <code>python scripts\fish_audio_voices.py list</code> 更新列表。
+                <template v-if="fishVoicesLoading">加载音色列表中...</template>
+                <template v-else>{{ fishVoices.length }} 个可用音色。运行 <code>python scripts\fish_audio_voices.py list</code> 可刷新列表。</template>
               </p>
             </div>
           </template>
+
+          <div class="settings-card__group">
+            <div class="settings-card__test-row">
+              <KuButton
+                size="sm"
+                variant="secondary"
+                :loading="ttsTesting"
+                :disabled="!praise.tts_enable"
+                @click="testTts"
+              >
+                {{ ttsTesting ? '试听中...' : '试听语音效果' }}
+              </KuButton>
+              <span
+                v-if="ttsResult"
+                class="settings-card__test-result"
+                :class="ttsResult.success ? 'settings-card__test-result--ok' : 'settings-card__test-result--fail'"
+              >
+                {{ ttsResult.success ? '播放成功' : ttsResult.error || '播放失败' }}
+              </span>
+            </div>
+            <p class="settings-card__hint">测试当前选中的引擎和音色，用简短例句进行播报。</p>
+          </div>
 
           <div class="settings-card__group">
             <div class="settings-card__slider-header">
@@ -275,7 +290,6 @@
             </div>
           </div>
 
-          <!-- 时间设置 -->
           <div class="settings-card__section-label">时间设置</div>
 
           <div class="settings-card__group">
@@ -304,8 +318,8 @@
               <div class="settings-card__input-wrap settings-card__input-wrap--icon-left">
                 <span class="settings-card__input-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
                   </svg>
                 </span>
                 <input
@@ -323,13 +337,16 @@
           <KuButton variant="primary" size="md" :loading="praiseLoading" @click="savePraiseConfig">
             {{ praiseLoading ? '保存中...' : '保存夸夸设置' }}
           </KuButton>
-          <p v-if="praiseSaveMsg" class="settings-card__message" :class="praiseSaveSuccess ? 'settings-card__message--ok' : 'settings-card__message--error'">
+          <p
+            v-if="praiseSaveMsg"
+            class="settings-card__message"
+            :class="praiseSaveSuccess ? 'settings-card__message--ok' : 'settings-card__message--error'"
+          >
             {{ praiseSaveMsg }}
           </p>
         </div>
       </section>
 
-      <!-- ==================== 每日一句 ==================== -->
       <section v-show="activeTab === 'quote'" class="settings-card">
         <div class="settings-card__head">
           <h3>每日一句</h3>
@@ -345,10 +362,9 @@
                 </option>
               </select>
             </div>
-            <p class="settings-card__hint">选择你喜欢的文案类型，每天会显示该分类的一句话。</p>
+            <p class="settings-card__hint">选择你喜欢的文案类型，每天会展示该分类的一句话。</p>
           </div>
 
-          <!-- 预览 -->
           <div class="settings-card__preview">
             <p class="settings-card__preview-label">效果预览</p>
             <blockquote class="settings-card__preview-quote">
@@ -362,7 +378,6 @@
         </div>
       </section>
 
-      <!-- ==================== 数据管理 ==================== -->
       <section v-show="activeTab === 'data'" class="settings-card settings-card--danger">
         <div class="settings-card__head">
           <h3>清除本地数据</h3>
@@ -378,28 +393,26 @@
           <KuButton variant="danger" size="md" @click="confirmDelete">删除全部数据</KuButton>
         </div>
       </section>
-
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import KuButton from '@/components/base/KuButton.vue'
-import { deleteAllData, getActivityWatchStatus, getSettings, listTtsVoices, updateSettings } from '@/api'
+import api, { deleteAllData, getActivityWatchStatus, getSettings, listTtsVoices, updateSettings } from '@/api'
 import { praiseApi } from '@/api/praise'
 import { HITOKOTO_CATEGORIES, getSavedCategory, saveCategory } from '@/hooks/useHitokoto'
 import type { ActivityWatchStatus, PraiseConfig, SettingsPayload, SettingsResponse, TtsVoice } from '@/types/api'
 import { handleApiError } from '@/utils/error'
 import { normalizeSettings } from '@/utils/validation'
 
-// ==================== 侧边栏导航 ====================
 const activeTab = ref<'preference' | 'praise' | 'quote' | 'data'>('preference')
 
 const navItems = [
   {
     id: 'preference' as const,
-    label: '基本设置',
+    label: '基础设置',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   },
   {
@@ -419,18 +432,17 @@ const navItems = [
   },
 ]
 
-// ==================== 音色列表 ====================
 const kokoroVoices = {
   female: Array.from({ length: 32 }, (_, i) => `zf_${String(i + 1).padStart(3, '0')}`),
   male: Array.from({ length: 10 }, (_, i) => `zm_${String(i + 1).padStart(3, '0')}`),
 }
 
 const fishVoices = ref<TtsVoice[]>([])
+const fishVoicesLoading = ref(false)
 const fishAudioKeyInput = ref('')
 const showFishKey = ref(false)
 const fishKeySaving = ref(false)
 
-// ==================== 状态 ====================
 const settings = ref<SettingsResponse>({
   aw_server_url: 'http://127.0.0.1:5600',
   data_masking: false,
@@ -461,12 +473,16 @@ const praise = ref<PraiseConfig>({
   nightly_summary_time: '21:30',
 })
 
-// Load Fish Audio voices when switching to fish_audio engine OR on first load
-watch(() => praise.value.tts_engine, (engine) => {
-  if (engine === 'fish_audio') {
-    refreshFishVoices()
-  }
-}, { immediate: true })
+watch(
+  () => praise.value.tts_engine,
+  (engine) => {
+    if (engine === 'fish_audio') {
+      refreshFishVoices()
+    }
+  },
+  { immediate: true },
+)
+
 const praiseLoading = ref(false)
 const praiseSaveMsg = ref('')
 const praiseSaveSuccess = ref(false)
@@ -474,16 +490,20 @@ const praiseSaveSuccess = ref(false)
 const quoteCategory = ref(getSavedCategory())
 
 const previewQuote = computed(() => {
-  const cats = HITOKOTO_CATEGORIES.find(c => c.code === quoteCategory.value)
-  return cats ? `「${cats.label}」示例文案：今天的你也很棒，继续加油！` : '请选择一个分类查看预览'
+  const category = HITOKOTO_CATEGORIES.find((item) => item.code === quoteCategory.value)
+  return category
+    ? `“${category.label}” 示例文案：今天的你也很棒，继续加油。`
+    : '请选择一个分类查看预览。'
 })
 
-// ==================== 生命周期 ====================
 onMounted(async () => {
   await Promise.all([loadSettings(), loadPraiseConfig()])
 })
 
-// ==================== 方法 ====================
+onBeforeUnmount(() => {
+  ttsAbortController?.abort()
+})
+
 async function loadSettings() {
   try {
     settings.value = normalizeSettings((await getSettings()).data)
@@ -497,9 +517,9 @@ async function loadSettings() {
 
 async function loadPraiseConfig() {
   try {
-    const praiseRes = await praiseApi.getConfig()
-    if (praiseRes.data.status === 'success') {
-      praise.value = praiseRes.data.data
+    const response = await praiseApi.getConfig()
+    if (response.data.status === 'success') {
+      praise.value = response.data.data
     }
   } catch (error: unknown) {
     praiseSaveSuccess.value = false
@@ -580,13 +600,16 @@ async function clearApiKey() {
 }
 
 async function refreshFishVoices() {
+  fishVoicesLoading.value = true
   try {
-    const res = await listTtsVoices('fish_audio')
-    if (res.data.status === 'success') {
-      fishVoices.value = res.data.data || []
+    const response = await listTtsVoices('fish_audio')
+    if (response.data.status === 'success') {
+      fishVoices.value = response.data.data || []
     }
   } catch {
-    // Silently fail — voices come from local JSON file, API is optional
+    // Voice list is optional in local development.
+  } finally {
+    fishVoicesLoading.value = false
   }
 }
 
@@ -606,9 +629,43 @@ async function saveFishKey() {
   }
 }
 
+const ttsTesting = ref(false)
+const ttsResult = ref<{ success: boolean; error?: string } | null>(null)
+let ttsAbortController: AbortController | null = null
+
+async function testTts() {
+  // 取消前一个未完成的请求
+  ttsAbortController?.abort()
+  ttsAbortController = new AbortController()
+
+  ttsTesting.value = true
+  ttsResult.value = null
+  try {
+    const response = await api.post('/debug/test-tts',
+      { text: '你好，我是你的专属夸夸助手。' },
+      { signal: ttsAbortController.signal },
+    )
+    // 统一使用项目标准的 ApiResponse 格式校验
+    ttsResult.value = {
+      success: response.data.status === 'success',
+      error: response.data.status !== 'success' ? (response.data.message || '播放失败') : undefined,
+    }
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'CanceledError') {
+      return // 请求被取消，不更新 UI
+    }
+    ttsResult.value = { success: false, error: '网络请求失败' }
+  } finally {
+    if (ttsAbortController && !ttsAbortController.signal.aborted) {
+      ttsTesting.value = false
+    }
+  }
+}
+
 async function savePraiseConfig() {
   praiseLoading.value = true
   praiseSaveMsg.value = ''
+
   try {
     const payload = {
       ...praise.value,
@@ -616,9 +673,9 @@ async function savePraiseConfig() {
       kokoro_voice: praise.value.kokoro_voice.trim(),
       tts_speed: Number(praise.value.tts_speed),
     }
-    const res = await praiseApi.updateConfig(payload)
-    if (res.data.status === 'success') {
-      praise.value = res.data.data
+    const response = await praiseApi.updateConfig(payload)
+    if (response.data.status === 'success') {
+      praise.value = response.data.data
       praiseSaveSuccess.value = true
       praiseSaveMsg.value = '夸夸设置已保存'
     }
@@ -651,14 +708,14 @@ async function confirmDelete() {
 </script>
 
 <style scoped>
-/* ==================== 整体布局 ==================== */
+/* ==================== 鏁翠綋甯冨眬 ==================== */
 .settings-sheet {
   display: flex;
   gap: var(--space-4);
   min-height: 100%;
 }
 
-/* ==================== 侧边栏导航 ==================== */
+/* ==================== 渚ц竟鏍忓鑸?==================== */
 .settings-nav {
   display: flex;
   flex-direction: column;
@@ -709,7 +766,7 @@ async function confirmDelete() {
   line-height: 1;
 }
 
-/* ==================== 内容区 ==================== */
+/* ==================== 鍐呭鍖?==================== */
 .settings-content {
   flex: 1;
   min-width: 0;
@@ -718,7 +775,7 @@ async function confirmDelete() {
   gap: var(--space-4);
 }
 
-/* ==================== 卡片 ==================== */
+/* ==================== 鍗＄墖 ==================== */
 .settings-card {
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(126, 104, 84, 0.1);
@@ -759,7 +816,7 @@ async function confirmDelete() {
   gap: var(--space-4);
 }
 
-/* ==================== 分组标题 ==================== */
+/* ==================== 鍒嗙粍鏍囬 ==================== */
 .settings-card__section-label {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
@@ -770,7 +827,7 @@ async function confirmDelete() {
   border-bottom: 1px solid rgba(126, 104, 84, 0.08);
 }
 
-/* ==================== 表单标签 ==================== */
+/* ==================== 琛ㄥ崟鏍囩 ==================== */
 .settings-card__label {
   display: block;
   margin-bottom: var(--space-2);
@@ -816,7 +873,27 @@ async function confirmDelete() {
   margin-bottom: 0;
 }
 
-/* ==================== 输入框 ==================== */
+.settings-card__test-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.settings-card__test-result {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.settings-card__test-result--ok {
+  color: var(--color-success);
+}
+
+.settings-card__test-result--fail {
+  color: var(--color-danger);
+}
+
+/* ==================== 杈撳叆妗?==================== */
 .settings-card__group {
   display: flex;
   flex-direction: column;
@@ -893,7 +970,7 @@ async function confirmDelete() {
   color: var(--color-text-primary);
 }
 
-/* ==================== 下拉框 ==================== */
+/* ==================== 涓嬫媺妗?==================== */
 .settings-card__select-wrap {
   position: relative;
 }
@@ -922,7 +999,7 @@ async function confirmDelete() {
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
-/* ==================== 开关 ==================== */
+/* ==================== 寮€鍏?==================== */
 .settings-card__switch {
   position: relative;
   width: 44px;
@@ -996,7 +1073,7 @@ async function confirmDelete() {
   border-radius: var(--radius-lg);
 }
 
-/* ==================== 状态标签 ==================== */
+/* ==================== 鐘舵€佹爣绛?==================== */
 .settings-card__status-badge {
   display: inline-flex;
   align-items: center;
@@ -1020,7 +1097,7 @@ async function confirmDelete() {
   background: var(--color-danger-soft);
 }
 
-/* ==================== 滑块 ==================== */
+/* ==================== 婊戝潡 ==================== */
 .settings-card__slider-header {
   display: flex;
   align-items: center;
@@ -1075,7 +1152,7 @@ async function confirmDelete() {
   transform: scale(1.15);
 }
 
-/* ==================== 时间选择 ==================== */
+/* ==================== 鏃堕棿閫夋嫨 ==================== */
 .settings-card__time-row {
   display: flex;
   align-items: center;
@@ -1114,7 +1191,7 @@ async function confirmDelete() {
   flex-shrink: 0;
 }
 
-/* ==================== 消息提示 ==================== */
+/* ==================== 娑堟伅鎻愮ず ==================== */
 .settings-card__message {
   font-size: var(--font-size-sm);
   padding: var(--space-2) var(--space-3);
@@ -1131,7 +1208,7 @@ async function confirmDelete() {
   background: var(--color-danger-soft);
 }
 
-/* ==================== 每日一句预览 ==================== */
+/* ==================== 姣忔棩涓€鍙ラ瑙?==================== */
 .settings-card__preview {
   padding: var(--space-4);
   background: linear-gradient(135deg, rgba(201, 138, 105, 0.08), rgba(212, 168, 75, 0.06));
@@ -1158,14 +1235,14 @@ async function confirmDelete() {
   font-style: italic;
 }
 
-/* ==================== 危险区 ==================== */
+/* ==================== 鍗遍櫓鍖?==================== */
 .settings-card__danger-desc {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   line-height: 1.7;
 }
 
-/* ==================== 响应式 ==================== */
+/* ==================== 鍝嶅簲寮?==================== */
 @media (max-width: 520px) {
   .settings-sheet {
     flex-direction: column;

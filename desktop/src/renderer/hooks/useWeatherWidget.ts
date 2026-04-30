@@ -94,8 +94,13 @@ export function useWeatherWidget() {
   const weather = ref<WeatherWidgetData | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  let abortController: AbortController | null = null
 
   async function fetchWeather() {
+    // 取消前一个未完成的请求
+    abortController?.abort()
+    abortController = new AbortController()
+
     loading.value = true
     error.value = null
 
@@ -109,6 +114,7 @@ export function useWeatherWidget() {
 
       const response = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto`,
+        { signal: abortController.signal },
       )
 
       if (!response.ok) {
@@ -141,10 +147,15 @@ export function useWeatherWidget() {
         windText: formatWind(typeof current.wind_speed_10m === 'number' ? current.wind_speed_10m : null),
         weatherCode: typeof current.weather_code === 'number' ? current.weather_code : null,
       }
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        return // 请求被取消，不更新 UI
+      }
       error.value = '天气数据加载失败'
     } finally {
-      loading.value = false
+      if (!abortController?.signal.aborted) {
+        loading.value = false
+      }
     }
   }
 

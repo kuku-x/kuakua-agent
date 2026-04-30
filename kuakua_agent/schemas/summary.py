@@ -17,4 +17,5 @@ class SummaryResponse(BaseModel):
     focus_score: int = Field(ge=0, le=100)
     praise_text: str
     suggestions: list[str] = Field(default_factory=list)
+    anomalies: list[str] = Field(default_factory=list)
 

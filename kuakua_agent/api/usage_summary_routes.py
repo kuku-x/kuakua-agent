@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from kuakua_agent.schemas.common import ApiResponse
 from kuakua_agent.schemas.nightly_summary import NightlySummaryResponse
-from kuakua_agent.services.storage_layer import PreferenceStore
+from kuakua_agent.services.storage_layer import PraiseHistoryStore, PreferenceStore
 from kuakua_agent.services.user_behavior.daily_summarizer import DailyUsageSummarizer
 from kuakua_agent.services.user_behavior.daily_summary_db import DailyUsageSummaryDb
 
@@ -19,6 +19,25 @@ async def get_daily_summary(date: str) -> ApiResponse[dict]:
         return ApiResponse(data={"date": payload.date, "payload_json": payload.payload_json})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@usage_router.get("/nightly-summary/history", response_model=ApiResponse[list[dict]])
+async def get_nightly_summary_history(days: int = 7) -> ApiResponse[list[dict]]:
+    """Return recent nightly summaries for the history list."""
+    store = PraiseHistoryStore()
+    items = await store.get_recent(limit=days * 2)
+    summaries = []
+    seen: set[str] = set()
+    for item in items:
+        if item.trigger_type != "nightly_summary":
+            continue
+        snapshot = item.context_snapshot or {}
+        date = snapshot.get("date", "")
+        if not date or date in seen:
+            continue
+        seen.add(date)
+        summaries.append({"date": date, "content": item.content})
+    return ApiResponse(data=summaries[:days])
 
 
 @usage_router.get("/daily-summary/recent", response_model=ApiResponse[list[dict]])

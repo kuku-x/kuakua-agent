@@ -6,15 +6,15 @@
     <div class="aw-status__actions" @click.stop>
       <button class="aw-status__btn" title="重连" @click="$emit('retry')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 4v6h-6M1 20v-6h6"/>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          <path d="M23 4v6h-6M1 20v-6h6" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
         </svg>
       </button>
       <button class="aw-status__btn" title="更多" @click="$emit('more')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="12" cy="5" r="2"/>
-          <circle cx="12" cy="12" r="2"/>
-          <circle cx="12" cy="19" r="2"/>
+          <circle cx="12" cy="5" r="2" />
+          <circle cx="12" cy="12" r="2" />
+          <circle cx="12" cy="19" r="2" />
         </svg>
       </button>
     </div>
@@ -37,24 +37,32 @@ defineEmits<{
 
 const label = computed(() => {
   switch (props.status) {
-    case 'connected': return '已连接'
-    case 'syncing': return '同步中'
-    case 'disconnected': return '已断开'
-    default: return '未知状态'
+    case 'connected':
+      return '已连接'
+    case 'syncing':
+      return '同步中'
+    case 'disconnected':
+      return '已断开'
+    default:
+      return '未知状态'
   }
 })
 
 const lastSyncLabel = computed(() => {
   if (!props.lastSyncTime) return null
+
   const now = new Date()
   const diffMs = now.getTime() - props.lastSyncTime.getTime()
   const diffMins = Math.floor(diffMs / 60000)
+
   if (diffMins < 1) return '刚刚同步'
-  if (diffMins < 60) return `${diffMins}分钟前同步`
+  if (diffMins < 60) return `${diffMins} 分钟前同步`
+
   const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}小时前同步`
+  if (diffHours < 24) return `${diffHours} 小时前同步`
+
   const diffDays = Math.floor(diffHours / 24)
-  return `${diffDays}天前同步`
+  return `${diffDays} 天前同步`
 })
 </script>
 

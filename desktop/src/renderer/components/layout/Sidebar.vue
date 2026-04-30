@@ -6,7 +6,6 @@
       { 'sidebar--mobile-open': mobileOpen },
     ]"
   >
-    <!-- AW Status Indicator -->
     <AwStatusIndicator
       :status="awStatus"
       :last-sync-time="awLastSync"
@@ -121,13 +120,13 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getActivityWatchStatus } from '@/api'
 import { useChatStore } from '@/store/chat'
 import { useSummaryStore } from '@/store/summary'
 import AwStatusIndicator from './AwStatusIndicator.vue'
 import AwStatusPopover from './AwStatusPopover.vue'
-import { getAwStatus } from '@/api'
-import type { AwStatus } from '@/types/api'
 
 defineProps<{
   collapsed: boolean
@@ -150,18 +149,25 @@ const showAwPopover = ref(false)
 
 let awPollInterval: number | null = null
 
+const navItems = [
+  { to: '/', label: '每日摘要', caption: '今天的节奏与应用分布', icon: '日' },
+  { to: '/chat', label: '陪伴聊天', caption: '延续上下文继续聊', icon: '聊' },
+  { to: '/nightly-summary', label: '晚间总结', caption: '每日回顾与历史总结', icon: '夜' },
+  { to: '/weekly-review', label: '每周复盘', caption: '七天的趋势与回顾', icon: '周' },
+]
+
 async function fetchAwStatus() {
   try {
-    const res = await getAwStatus()
+    const res = await getActivityWatchStatus()
     if (res.data.status === 'success' && res.data.data) {
       const data = res.data.data
-      awStatus.value = data.status === 'connected' ? 'connected' : 'disconnected'
-      awLastSync.value = data.last_sync ? new Date(data.last_sync) : null
-      awError.value = data.error
+      awStatus.value = data.connected ? 'connected' : 'disconnected'
+      awLastSync.value = null
+      awError.value = data.connected ? null : data.message
     }
   } catch {
     awStatus.value = 'disconnected'
-    awError.value = '无法获取状态'
+    awError.value = '无法获取 ActivityWatch 状态'
   }
 }
 
@@ -172,7 +178,6 @@ async function retryAwConnection() {
 }
 
 function openAwLogs() {
-  // TODO: 打开日志文件或跳转日志页
   showAwPopover.value = false
 }
 
@@ -180,22 +185,6 @@ function goToSettings() {
   router.push('/settings#activitywatch')
   showAwPopover.value = false
 }
-
-onMounted(() => {
-  fetchAwStatus()
-  awPollInterval = window.setInterval(fetchAwStatus, 30000)
-})
-
-onUnmounted(() => {
-  if (awPollInterval) {
-    clearInterval(awPollInterval)
-  }
-})
-
-const navItems = [
-  { to: '/', label: '每日摘要', caption: '今天的节奏与应用分布', icon: '日' },
-  { to: '/chat', label: '陪伴聊天', caption: '延续上下文继续聊', icon: '聊' },
-]
 
 function isActiveSession(sessionId: string) {
   return route.path === '/chat' && sessionId === chatStore.activeChatId
@@ -216,6 +205,17 @@ function formatSessionMeta(date: Date, count: number) {
   const minutes = `${date.getMinutes()}`.padStart(2, '0')
   return `${hours}:${minutes} · ${count} 条消息`
 }
+
+onMounted(() => {
+  void fetchAwStatus()
+  awPollInterval = window.setInterval(fetchAwStatus, 30000)
+})
+
+onUnmounted(() => {
+  if (awPollInterval) {
+    clearInterval(awPollInterval)
+  }
+})
 </script>
 
 <style scoped>

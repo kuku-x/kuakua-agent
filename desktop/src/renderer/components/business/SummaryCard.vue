@@ -28,6 +28,14 @@
       </article>
     </div>
 
+    <div v-if="summary.anomalies?.length" class="summary-card__anomalies">
+      <p class="summary-card__anomalies-title">节奏提醒</p>
+      <div v-for="(a, i) in summary.anomalies" :key="i" class="summary-card__anomaly">
+        <span class="summary-card__anomaly-icon">💡</span>
+        <span>{{ a }}</span>
+      </div>
+    </div>
+
     <div v-if="summary.suggestions?.length" class="summary-card__suggestions">
       <p class="summary-card__suggestions-title">温柔建议</p>
       <ul>
@@ -145,6 +153,39 @@ const summaryBreakdown = computed(() => {
 .summary-card__suggestions li:first-child {
   padding-top: 0;
   border-top: none;
+}
+
+.summary-card__anomalies {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.summary-card__anomalies-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: var(--space-1);
+}
+
+.summary-card__anomaly {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: rgba(212, 168, 75, .08);
+  border: 1px solid rgba(212, 168, 75, .14);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.summary-card__anomaly-icon {
+  flex-shrink: 0;
 }
 
 @media (max-width: 720px) {

@@ -50,10 +50,11 @@ class PraiseScheduler:
             logger.info("触发被冷却拦截")
             return None
 
-        # Build milestone data for the workflow
+        # Build milestone data for the workflow, enriched with recent trends
         milestone = {
             "event_type": event.trigger_type.value,
             "data": event.data,
+            "trend": await self._get_trend_context(),
         }
 
         try:
@@ -95,6 +96,55 @@ class PraiseScheduler:
             except Exception as e:
                 logger.error(f"调度循环异常: {e}")
             await asyncio.sleep(self.POLL_INTERVAL)
+
+    async def _get_trend_context(self) -> str:
+        """Build a brief trend summary from the last few days of daily summaries."""
+        try:
+            from kuakua_agent.services.user_behavior.daily_summary_db import DailyUsageSummaryDb
+            from datetime import date, timedelta
+            import json
+
+            db = DailyUsageSummaryDb()
+            today = date.today()
+            days_data: list[dict] = []
+            for i in range(3, 0, -1):
+                target = (today - timedelta(days=i)).isoformat()
+                try:
+                    payload = db.get(target)
+                    if payload is None:
+                        continue
+                    data = json.loads(payload.payload_json)
+                    c = data.get("combined", {}) or {}
+                    days_data.append({
+                        "date": target,
+                        "total_h": round(c.get("total_seconds", 0) / 3600, 1),
+                        "work_h": round(c.get("work_seconds", 0) / 3600, 1),
+                        "entertainment_h": round(c.get("entertainment_seconds", 0) / 3600, 1),
+                    })
+                except Exception:
+                    continue
+
+            if not days_data:
+                return "暂无近期趋势数据"
+
+            lines = []
+            for d in days_data:
+                lines.append(f"{d['date'][-5:]}: 共{d['total_h']}h 工作{d['work_h']}h 娱乐{d['entertainment_h']}h")
+
+            # Simple trend detection
+            if len(days_data) >= 2:
+                work_trend = days_data[-1]["work_h"] - days_data[-2]["work_h"]
+                ent_trend = days_data[-1]["entertainment_h"] - days_data[-2]["entertainment_h"]
+                if work_trend >= 1:
+                    lines.append(f"趋势：工作比昨天增加了 {work_trend:.1f}h，在进步中")
+                elif work_trend <= -1:
+                    lines.append(f"趋势：工作比昨天减少了 {abs(work_trend):.1f}h，可能今天状态稍微放松")
+                if ent_trend >= 1:
+                    lines.append(f"趋势：娱乐比昨天增加了 {ent_trend:.1f}h")
+
+            return "\n".join(lines)
+        except Exception:
+            return ""
 
     async def _check_rules(self) -> None:
         if not await self._cooldown.can_praise():
