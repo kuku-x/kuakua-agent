@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { sendChatStream } from '@/api'
 import type { ChatContext } from '@/types/api'
 import { handleApiError } from '@/utils/error'
+import { getRandomTemplatePraise } from '@/utils/praiseTemplates'
 
 export interface ChatMessage {
   id: string
@@ -145,9 +146,21 @@ export const useChatStore = defineStore('chat', () => {
       session.messages[assistantIndex].status = 'sent'
       session.updatedAt = new Date()
     } catch (e: unknown) {
-      error.value = handleApiError(e)
-      session.messages[assistantIndex].status = 'failed'
-      session.messages[assistantIndex].content = '抱歉，回复失败了。'
+      const errorMessage = handleApiError(e)
+      // 检测是否是 API Key 相关错误
+      const isApiKeyError = errorMessage.includes('API key') ||
+                           errorMessage.includes('API_KEY') ||
+                           errorMessage.includes('API密钥')
+
+      if (isApiKeyError) {
+        session.messages[assistantIndex].content = getRandomTemplatePraise()
+        session.messages[assistantIndex].status = 'sent'
+        error.value = null  // 不显示错误提示
+      } else {
+        error.value = errorMessage
+        session.messages[assistantIndex].status = 'failed'
+        session.messages[assistantIndex].content = '抱歉，回复失败了。'
+      }
     } finally {
       loading.value = false
     }
