@@ -3,6 +3,7 @@ import json
 import time
 import httpx
 from kuakua_agent.config import settings
+from kuakua_agent.core.errors import NoApiKeyError
 from kuakua_agent.core.logging import get_logger
 from kuakua_agent.services.storage_layer import PreferenceStore
 
@@ -17,11 +18,14 @@ class ModelAdapter:
         self.api_key = raw_key.strip() if raw_key else ""
         self.model_id = settings.llm_model_id.strip()
 
+    def has_api_key(self) -> bool:
+        """Check if an API key is configured"""
+        return bool(self.api_key)
+
     def _require_api_key(self) -> None:
-        """Raise if no API key is configured, so the error surfaces at call time
-        rather than during scheduler / service construction."""
-        if not self.api_key:
-            raise ValueError(
+        """Raise if no API key is configured"""
+        if not self.has_api_key():
+            raise NoApiKeyError(
                 "API key is not configured. "
                 "Please set DEEPSEEK_API_KEY / LLM_API_KEY / ARK_API_KEY "
                 "in your environment or .env file."
