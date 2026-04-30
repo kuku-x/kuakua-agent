@@ -6,6 +6,25 @@
       { 'sidebar--mobile-open': mobileOpen },
     ]"
   >
+    <!-- AW Status Indicator -->
+    <AwStatusIndicator
+      :status="awStatus"
+      :last-sync-time="awLastSync"
+      @click="showAwPopover = true"
+      @retry="retryAwConnection"
+      @more="showAwPopover = true"
+    />
+    <AwStatusPopover
+      :visible="showAwPopover"
+      :status="awStatus === 'disconnected' ? 'disconnected' : 'connected'"
+      :last-sync-time="awLastSync"
+      :error="awError"
+      @close="showAwPopover = false"
+      @retry="retryAwConnection"
+      @open-logs="openAwLogs"
+      @open-settings="goToSettings"
+    />
+
     <div class="sidebar__header">
       <button
         class="sidebar__toggle"
@@ -105,6 +124,10 @@
 import { useRoute, useRouter } from 'vue-router'
 import { useChatStore } from '@/store/chat'
 import { useSummaryStore } from '@/store/summary'
+import AwStatusIndicator from './AwStatusIndicator.vue'
+import AwStatusPopover from './AwStatusPopover.vue'
+import { getAwStatus } from '@/api'
+import type { AwStatus } from '@/types/api'
 
 defineProps<{
   collapsed: boolean
@@ -119,6 +142,55 @@ const route = useRoute()
 const router = useRouter()
 const chatStore = useChatStore()
 const summaryStore = useSummaryStore()
+
+const awStatus = ref<'connected' | 'syncing' | 'disconnected'>('disconnected')
+const awLastSync = ref<Date | null>(null)
+const awError = ref<string | null>(null)
+const showAwPopover = ref(false)
+
+let awPollInterval: number | null = null
+
+async function fetchAwStatus() {
+  try {
+    const res = await getAwStatus()
+    if (res.data.status === 'success' && res.data.data) {
+      const data = res.data.data
+      awStatus.value = data.status === 'connected' ? 'connected' : 'disconnected'
+      awLastSync.value = data.last_sync ? new Date(data.last_sync) : null
+      awError.value = data.error
+    }
+  } catch {
+    awStatus.value = 'disconnected'
+    awError.value = '无法获取状态'
+  }
+}
+
+async function retryAwConnection() {
+  awStatus.value = 'syncing'
+  showAwPopover.value = false
+  await fetchAwStatus()
+}
+
+function openAwLogs() {
+  // TODO: 打开日志文件或跳转日志页
+  showAwPopover.value = false
+}
+
+function goToSettings() {
+  router.push('/settings#activitywatch')
+  showAwPopover.value = false
+}
+
+onMounted(() => {
+  fetchAwStatus()
+  awPollInterval = window.setInterval(fetchAwStatus, 30000)
+})
+
+onUnmounted(() => {
+  if (awPollInterval) {
+    clearInterval(awPollInterval)
+  }
+})
 
 const navItems = [
   { to: '/', label: '每日摘要', caption: '今天的节奏与应用分布', icon: '日' },
