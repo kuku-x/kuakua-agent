@@ -37,7 +37,7 @@ class ActivityWatchScheduler:
     async def _loop(self) -> None:
         while self._running:
             try:
-                events = self._detector.detect_and_record()
+                events = await self._detector.detect_and_record()
                 if events:
                     logger.debug(f"检测到 {len(events)} 个行为事件")
             except Exception as e:

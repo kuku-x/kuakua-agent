@@ -1,4 +1,6 @@
 import json
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -31,12 +33,39 @@ class TraceIdMiddleware(BaseHTTPMiddleware):
 
 def create_app() -> FastAPI:
     configure_logging()
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        """Startup / shutdown logic, replacing the deprecated on_event hooks."""
+        from kuakua_agent.services.storage_layer import get_database
+        from kuakua_agent.services.monitor.scheduler import PraiseScheduler
+        from kuakua_agent.services.monitor.activitywatch import ActivityWatchScheduler
+        from kuakua_agent.services.monitor.nightly_summary_scheduler import NightlySummaryScheduler
+
+        db = get_database()
+        await db.init_db()
+
+        scheduler = PraiseScheduler()
+        await scheduler.start()
+
+        aw_scheduler = ActivityWatchScheduler()
+        await aw_scheduler.start()
+
+        nightly_summary = NightlySummaryScheduler()
+        await nightly_summary.start()
+
+        yield
+
+        await scheduler.stop()
+        await aw_scheduler.stop()
+        await nightly_summary.stop()
+
     app = FastAPI(
         title="Kuakua Agent API",
         version="0.1.0",
+        lifespan=lifespan,
     )
 
-    # 跨域中间件配置 - 允许所有来源开发
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

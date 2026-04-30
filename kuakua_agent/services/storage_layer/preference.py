@@ -7,9 +7,11 @@ class PreferenceStore:
     DEFAULT_PREFS = {
         "praise_auto_enable": "true",
         "tts_enable": "false",
+        "tts_engine": "kokoro",
         "tts_voice": "default",
         "kokoro_voice": "zf_001",
         "kokoro_model_path": "./ckpts/kokoro-v1.1",
+        "fish_audio_voice_id": "",
         "tts_speed": "1.0",
         "fish_audio_model": "s2-pro",
         "openweather_location": "Shanghai,CN",
@@ -21,14 +23,22 @@ class PreferenceStore:
         "nightly_summary_latest_date": "",
         "nightly_summary_latest_content": "",
         "nightly_summary_latest_read": "true",
+        "praise_last_triggered_at": "",
+        "praise_last_date": "",
+        "praise_daily_count": "0",
     }
 
     def __init__(self, db: Database | None = None):
         self._db = db or Database()
         self._initialized = False
 
+    @property
+    def db(self) -> Database:
+        """Public access to the underlying database for advanced operations."""
+        return self._db
+
     async def _init_defaults(self) -> None:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             for key, value in self.DEFAULT_PREFS.items():
                 await conn.execute(
                     "INSERT OR IGNORE INTO user_preferences (key, value) VALUES (?, ?)",
@@ -43,7 +53,7 @@ class PreferenceStore:
 
     async def get(self, key: str) -> str | None:
         await self._ensure_initialized()
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             async with conn.execute(
                 "SELECT value FROM user_preferences WHERE key = ?", (key,)
             ) as cursor:
@@ -51,7 +61,7 @@ class PreferenceStore:
             return row["value"] if row else None
 
     async def set(self, key: str, value: str) -> None:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             await conn.execute(
                 "INSERT OR REPLACE INTO user_preferences (key, value, updated_at) VALUES (?, ?, ?)",
                 (key, value, datetime.now().isoformat()),
@@ -60,7 +70,7 @@ class PreferenceStore:
 
     async def get_all(self) -> dict[str, str]:
         await self._ensure_initialized()
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             async with conn.execute("SELECT key, value FROM user_preferences") as cursor:
                 rows = await cursor.fetchall()
             return {r["key"]: r["value"] for r in rows}

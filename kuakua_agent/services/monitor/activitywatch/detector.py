@@ -43,7 +43,7 @@ class BehaviorDetector:
         self._ms = MilestoneStore()
         self._last_check: datetime | None = None
 
-    def detect_and_record(self) -> list[BehaviorEvent]:
+    async def detect_and_record(self) -> list[BehaviorEvent]:
         """检测当前行为状态，有显著事件则记录 milestone"""
         now = datetime.now(timezone.utc)  # UTC，与 ActivityWatch 保持一致
         # 首次运行取最近30分钟窗口，避免窗口太小
@@ -66,7 +66,7 @@ class BehaviorDetector:
             focus_minutes = self._calc_focus_minutes(window_events, afk_events, since, now)
             if focus_minutes >= 30:
                 # 检查是否已记录过（避免重复）
-                recent = self._ms.get_recent(hours=1)
+                recent = await self._ms.get_recent(hours=1)
                 if not any(
                     e.event_type == "focus" and (now - e.occurred_at).total_seconds() < 3600
                     for e in self._get_synthetic_events_from_milestones(recent)
@@ -78,7 +78,7 @@ class BehaviorDetector:
                         occurred_at=now,
                         app_name=current_app,
                     )
-                    self._ms.add(
+                    await self._ms.add(
                         event_type="focus",
                         title=ev.title,
                         description=ev.description,
@@ -93,7 +93,7 @@ class BehaviorDetector:
             if any(kw in app_lower for kw in CODING_KEYWORDS):
                 coding_minutes = self._calc_coding_minutes(window_events, since, now)
                 if coding_minutes >= 20:
-                    recent = self._ms.get_recent(hours=1)
+                    recent = await self._ms.get_recent(hours=1)
                     if not any(
                         e.event_type == "coding" and (now - e.occurred_at).total_seconds() < 3600
                         for e in self._get_synthetic_events_from_milestones(recent)
@@ -105,7 +105,7 @@ class BehaviorDetector:
                             occurred_at=now,
                             app_name=current_app,
                         )
-                        self._ms.add(
+                        await self._ms.add(
                             event_type="coding",
                             title=ev.title,
                             description=ev.description,
@@ -116,7 +116,7 @@ class BehaviorDetector:
 
         # 检测自律事件（非工作时段工作）
         if self._is_unusual_hour() and not is_afk and current_app:
-            recent = self._ms.get_recent(hours=6)
+            recent = await self._ms.get_recent(hours=6)
             if not any(e.event_type == "discipline" for e in self._get_synthetic_events_from_milestones(recent)):
                 ev = BehaviorEvent(
                     event_type="discipline",
@@ -125,7 +125,7 @@ class BehaviorDetector:
                     occurred_at=now,
                     app_name=current_app,
                 )
-                self._ms.add(
+                await self._ms.add(
                     event_type="discipline",
                     title=ev.title,
                     description=ev.description,

@@ -1,4 +1,5 @@
 import codecs
+import json
 import time
 import httpx
 from kuakua_agent.config import settings
@@ -14,9 +15,17 @@ class ModelAdapter:
         self.base_url = settings.llm_base_url.rstrip("/")
         raw_key = pref.get_sync("model_api_key") or settings.llm_api_key
         self.api_key = raw_key.strip() if raw_key else ""
-        if not self.api_key:
-            raise ValueError("API key is not configured. Please set LLM_API_KEY or model_api_key.")
         self.model_id = settings.llm_model_id.strip()
+
+    def _require_api_key(self) -> None:
+        """Raise if no API key is configured, so the error surfaces at call time
+        rather than during scheduler / service construction."""
+        if not self.api_key:
+            raise ValueError(
+                "API key is not configured. "
+                "Please set DEEPSEEK_API_KEY / LLM_API_KEY / ARK_API_KEY "
+                "in your environment or .env file."
+            )
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -25,6 +34,7 @@ class ModelAdapter:
         }
 
     def complete(self, messages: list[dict], temperature: float = 0.8, max_tokens: int = 500) -> str:
+        self._require_api_key()
         started = time.perf_counter()
         payload = {
             "model": self.model_id,
@@ -57,6 +67,7 @@ class ModelAdapter:
 
     def stream_complete(self, messages: list[dict], temperature: float = 0.8, max_tokens: int = 500):
         """流式生成，返回可迭代对象"""
+        self._require_api_key()
         payload = {
             "model": self.model_id,
             "messages": messages,
@@ -75,7 +86,6 @@ class ModelAdapter:
                         data = line[6:]
                         if data == "[DONE]":
                             break
-                        import json
                         try:
                             chunk = json.loads(data)
                             content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
@@ -85,6 +95,7 @@ class ModelAdapter:
                             continue
 
     async def complete_async(self, messages: list[dict], temperature: float = 0.8, max_tokens: int = 500) -> str:
+        self._require_api_key()
         started = time.perf_counter()
         payload = {
             "model": self.model_id,
@@ -123,6 +134,7 @@ class ModelAdapter:
         max_tokens: int = 500,
     ) -> str:
         """带工具调用的生成，处理多轮 Tool Calling"""
+        self._require_api_key()
         started = time.perf_counter()
 
         all_messages = list(messages)
@@ -173,10 +185,9 @@ class ModelAdapter:
                 tool_args = tool_call["function"]["arguments"]
 
                 # 解析参数（可能是 JSON 字符串）
-                import json as _json
                 try:
-                    arguments = _json.loads(tool_args) if isinstance(tool_args, str) else tool_args
-                except _json.JSONDecodeError:
+                    arguments = json.loads(tool_args) if isinstance(tool_args, str) else tool_args
+                except json.JSONDecodeError:
                     arguments = {}
 
                 # 调用 MCP Client
@@ -203,6 +214,7 @@ class ModelAdapter:
 
     async def stream_complete_async(self, messages: list[dict], temperature: float = 0.8, max_tokens: int = 500):
         """异步流式生成，返回可迭代对象，逐字产出无缓冲"""
+        self._require_api_key()
         payload = {
             "model": self.model_id,
             "messages": messages,
@@ -236,11 +248,10 @@ class ModelAdapter:
                         data = decoded_line[6:]
                         if data == "[DONE]":
                             return
-                        import json as _json
                         try:
-                            chunk = _json.loads(data)
+                            chunk = json.loads(data)
                             content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
                             if content:
                                 yield content
-                        except _json.JSONDecodeError:
+                        except json.JSONDecodeError:
                             continue

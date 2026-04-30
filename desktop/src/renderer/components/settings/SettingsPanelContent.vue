@@ -163,43 +163,98 @@
           </div>
 
           <!-- TTS 配置 -->
-          <div class="settings-card__section-label">Kokoro TTS</div>
+          <div class="settings-card__section-label">语音播报 (TTS)</div>
 
+          <!-- TTS 引擎选择 -->
           <div class="settings-card__group">
-            <label class="settings-card__label">模型路径</label>
-            <div class="settings-card__input-row">
-              <div class="settings-card__input-wrap">
-                <input
-                  v-model="praise.kokoro_model_path"
-                  type="text"
-                  class="settings-card__input"
-                  placeholder="./ckpts/kokoro-v1.1"
-                />
-              </div>
-              <KuButton size="sm" variant="secondary" @click="selectModelPath">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                </svg>
-                选择文件夹
-              </KuButton>
-            </div>
-            <p class="settings-card__hint">可填写本地模型目录，或保留默认路径。</p>
-          </div>
-
-          <div class="settings-card__group">
-            <label class="settings-card__label">音色 ID</label>
+            <label class="settings-card__label">TTS 引擎</label>
             <div class="settings-card__select-wrap">
-              <select v-model="praise.kokoro_voice" class="settings-card__select">
-                <optgroup label="女声">
-                  <option v-for="v in femaleVoices" :key="v" :value="v">{{ v }}</option>
-                </optgroup>
-                <optgroup label="男声">
-                  <option v-for="v in maleVoices" :key="v" :value="v">{{ v }}</option>
-                </optgroup>
+              <select v-model="praise.tts_engine" class="settings-card__select">
+                <option value="fish_audio">Fish Audio（云端高质量）</option>
+                <option value="kokoro">Kokoro-82M（本地离线）</option>
               </select>
             </div>
-            <p class="settings-card__hint">选择音色后可在预览区试听效果。</p>
+            <p class="settings-card__hint">
+              Fish Audio 需配置 API Key，音质接近真人。Kokoro 完全本地运行无需联网。
+            </p>
           </div>
+
+          <!-- Kokoro 专属设置 -->
+          <template v-if="praise.tts_engine === 'kokoro'">
+            <div class="settings-card__group">
+              <label class="settings-card__label">模型路径</label>
+              <div class="settings-card__input-row">
+                <div class="settings-card__input-wrap">
+                  <input
+                    v-model="praise.kokoro_model_path"
+                    type="text"
+                    class="settings-card__input"
+                    placeholder="./ckpts/kokoro-v1.1"
+                  />
+                </div>
+              </div>
+              <p class="settings-card__hint">Kokoro-82M 模型目录路径。</p>
+            </div>
+
+            <div class="settings-card__group">
+              <label class="settings-card__label">本地音色</label>
+              <div class="settings-card__select-wrap">
+                <select v-model="praise.kokoro_voice" class="settings-card__select">
+                  <optgroup label="女声">
+                    <option v-for="v in kokoroVoices.female" :key="v" :value="v">{{ v }}</option>
+                  </optgroup>
+                  <optgroup label="男声">
+                    <option v-for="v in kokoroVoices.male" :key="v" :value="v">{{ v }}</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+          </template>
+
+          <!-- Fish Audio 专属设置 -->
+          <template v-if="praise.tts_engine === 'fish_audio'">
+            <div class="settings-card__group">
+              <label class="settings-card__label">API Key</label>
+              <div class="settings-card__input-row">
+                <div class="settings-card__input-wrap">
+                  <input
+                    v-model="fishAudioKeyInput"
+                    :type="showFishKey ? 'text' : 'password'"
+                    class="settings-card__input"
+                    placeholder="输入 Fish Audio API Key"
+                  />
+                </div>
+                <KuButton size="sm" @click="showFishKey = !showFishKey">
+                  {{ showFishKey ? '隐藏' : '显示' }}
+                </KuButton>
+                <KuButton size="sm" variant="primary" :loading="fishKeySaving" @click="saveFishKey">
+                  保存
+                </KuButton>
+              </div>
+              <p class="settings-card__hint">
+                <a href="https://fish.audio" target="_blank">fish.audio</a> 注册获取。
+              </p>
+            </div>
+
+            <div class="settings-card__group">
+              <label class="settings-card__label">云端音色</label>
+              <div class="settings-card__select-wrap">
+                <select v-model="praise.fish_audio_voice_id" class="settings-card__select">
+                  <option value="" disabled>选择音色…</option>
+                  <option
+                    v-for="v in fishVoices"
+                    :key="v.id"
+                    :value="v.id"
+                  >
+                    {{ v.title }}
+                  </option>
+                </select>
+              </div>
+              <p class="settings-card__hint">
+                {{ fishVoices.length }} 个可用音色。运行 <code>python scripts\fish_audio_voices.py list</code> 更新列表。
+              </p>
+            </div>
+          </template>
 
           <div class="settings-card__group">
             <div class="settings-card__slider-header">
@@ -329,12 +384,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import KuButton from '@/components/base/KuButton.vue'
-import { deleteAllData, getActivityWatchStatus, getSettings, updateSettings } from '@/api'
+import { deleteAllData, getActivityWatchStatus, getSettings, listTtsVoices, updateSettings } from '@/api'
 import { praiseApi } from '@/api/praise'
 import { HITOKOTO_CATEGORIES, getSavedCategory, saveCategory } from '@/hooks/useHitokoto'
-import type { ActivityWatchStatus, PraiseConfig, SettingsPayload, SettingsResponse } from '@/types/api'
+import type { ActivityWatchStatus, PraiseConfig, SettingsPayload, SettingsResponse, TtsVoice } from '@/types/api'
 import { handleApiError } from '@/utils/error'
 import { normalizeSettings } from '@/utils/validation'
 
@@ -365,25 +420,22 @@ const navItems = [
 ]
 
 // ==================== 音色列表 ====================
-const femaleVoices = [
-  'zf_001', 'zf_002', 'zf_003', 'zf_004', 'zf_005',
-  'zf_006', 'zf_007', 'zf_008', 'zf_009', 'zf_010',
-  'zf_011', 'zf_012', 'zf_013', 'zf_014', 'zf_015',
-  'zf_016', 'zf_017', 'zf_018', 'zf_019', 'zf_020',
-  'zf_021', 'zf_022', 'zf_023', 'zf_024', 'zf_025',
-  'zf_026', 'zf_027', 'zf_028', 'zf_029', 'zf_030',
-  'zf_031', 'zf_032',
-]
-const maleVoices = [
-  'zm_001', 'zm_002', 'zm_003', 'zm_004', 'zm_005',
-  'zm_006', 'zm_007', 'zm_008', 'zm_009', 'zm_010',
-]
+const kokoroVoices = {
+  female: Array.from({ length: 32 }, (_, i) => `zf_${String(i + 1).padStart(3, '0')}`),
+  male: Array.from({ length: 10 }, (_, i) => `zm_${String(i + 1).padStart(3, '0')}`),
+}
+
+const fishVoices = ref<TtsVoice[]>([])
+const fishAudioKeyInput = ref('')
+const showFishKey = ref(false)
+const fishKeySaving = ref(false)
 
 // ==================== 状态 ====================
 const settings = ref<SettingsResponse>({
   aw_server_url: 'http://127.0.0.1:5600',
   data_masking: false,
   doubao_api_key_set: false,
+  fish_audio_api_key_set: false,
 })
 
 const apiKeyInput = ref('')
@@ -398,14 +450,23 @@ const awStatusLoading = ref(false)
 const praise = ref<PraiseConfig>({
   praise_auto_enable: true,
   tts_enable: false,
+  tts_engine: 'kokoro',
   kokoro_voice: 'zf_001',
   kokoro_model_path: './ckpts/kokoro-v1.1',
+  fish_audio_voice_id: '',
   tts_speed: 1.0,
   do_not_disturb_start: '22:00',
   do_not_disturb_end: '08:00',
   nightly_summary_enable: true,
   nightly_summary_time: '21:30',
 })
+
+// Load Fish Audio voices when switching to fish_audio engine OR on first load
+watch(() => praise.value.tts_engine, (engine) => {
+  if (engine === 'fish_audio') {
+    refreshFishVoices()
+  }
+}, { immediate: true })
 const praiseLoading = ref(false)
 const praiseSaveMsg = ref('')
 const praiseSaveSuccess = ref(false)
@@ -518,9 +579,31 @@ async function clearApiKey() {
   }
 }
 
-function selectModelPath() {
-  // 浏览器环境下无法打开文件浏览器，提示用户手动输入
-  window.alert('请在下方输入框中粘贴 Kokoro 模型文件夹的路径。')
+async function refreshFishVoices() {
+  try {
+    const res = await listTtsVoices('fish_audio')
+    if (res.data.status === 'success') {
+      fishVoices.value = res.data.data || []
+    }
+  } catch {
+    // Silently fail — voices come from local JSON file, API is optional
+  }
+}
+
+async function saveFishKey() {
+  fishKeySaving.value = true
+  try {
+    const payload: SettingsPayload = {
+      aw_server_url: settings.value.aw_server_url,
+      data_masking: settings.value.data_masking,
+      fish_audio_api_key: fishAudioKeyInput.value.trim(),
+    }
+    await updateSettings(payload)
+    fishAudioKeyInput.value = ''
+    await refreshFishVoices()
+  } finally {
+    fishKeySaving.value = false
+  }
 }
 
 async function savePraiseConfig() {
@@ -716,6 +799,21 @@ async function confirmDelete() {
   align-items: center;
   gap: var(--space-1);
   color: var(--color-success);
+}
+
+.settings-card__hint--error {
+  color: var(--color-danger);
+}
+
+.settings-card__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.settings-card__label-row .settings-card__label {
+  margin-bottom: 0;
 }
 
 /* ==================== 输入框 ==================== */

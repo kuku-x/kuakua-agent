@@ -37,7 +37,7 @@ class FishTTS(OutputChannel):
         if not api_key:
             return OutputResult(success=False, channel="tts", content=content, error="Fish Audio API key is not configured")
 
-        voice_id = await self._pref.get("tts_voice") or ""
+        voice_id = await self._pref.get("fish_audio_voice_id") or await self._pref.get("tts_voice") or ""
         if not voice_id or voice_id == "default":
             return OutputResult(success=False, channel="tts", content=content, error="Fish Audio voice id is not configured")
 
@@ -62,11 +62,17 @@ class FishTTS(OutputChannel):
                     cached.write_bytes(audio_data)
                 except OSError:
                     pass
+            else:
+                pass  # using cached
 
             await self._play_audio(str(cached))
             return OutputResult(success=True, channel="tts", content=content)
         except Exception as exc:
-            return OutputResult(success=False, channel="tts", content=content, error=f"Fish Audio playback failed: {exc}")
+            detail = f"{type(exc).__name__}: {exc}" if str(exc) else f"{type(exc).__name__} (no message)"
+            return OutputResult(
+                success=False, channel="tts", content=content,
+                error=f"Fish Audio failed at {voice_id[:12]}...: {detail}",
+            )
 
     async def _fetch_tts(
         self,
@@ -102,7 +108,7 @@ class FishTTS(OutputChannel):
 
 class KokoroTTS(OutputChannel):
     DEFAULT_MODEL_SOURCE = "hexgrad/Kokoro-82M-v1.1-zh"
-    DEFAULT_MODEL_PATH = "D:\project\External-ependencies\kokoro-v1.1"
+    DEFAULT_MODEL_PATH = r"D:\project\External-ependencies\kokoro-v1.1"
     DEFAULT_VOICE = "zf_001"
     SAMPLE_RATE = 24000
 
@@ -170,13 +176,25 @@ class KokoroTTS(OutputChannel):
         except Exception as exc:
             raise RuntimeError(f"Failed to import Kokoro: {exc}") from exc
 
+        # kokoro's repo_id only accepts HuggingFace repo IDs (user/repo).
+        # Local filesystem paths (e.g. D:\...\kokoro-v1.1) fail validation,
+        # so treat non-repo-id strings as a signal to use the default model.
+        source_is_local = (
+            "\\" in model_source
+            or (":" in model_source and len(model_source) > 3)  # Windows drive
+        ) or Path(model_source).is_absolute()
+
+        effective_repo = self.DEFAULT_MODEL_SOURCE if source_is_local else model_source
+
         try:
-            self._pipeline = KPipeline(lang_code="z", repo_id=model_source)
+            self._pipeline = KPipeline(lang_code="z", repo_id=effective_repo)
         except TypeError:
             # Older package versions may not expose repo_id.
             self._pipeline = KPipeline(lang_code="z")
         except Exception as exc:
-            raise RuntimeError(f"Failed to initialize Kokoro pipeline from `{model_source}`: {exc}") from exc
+            raise RuntimeError(
+                f"Failed to initialize Kokoro pipeline from `{effective_repo}`: {exc}"
+            ) from exc
 
         self._pipeline_source = model_source
         return self._pipeline
@@ -190,26 +208,62 @@ class KokoroTTS(OutputChannel):
         if not raw_value:
             raw_value = self.DEFAULT_MODEL_SOURCE
 
-        candidate = Path(raw_value)
-        if candidate.is_absolute():
-            return str(candidate)
+        # Try the configured value first, then the hard-coded fallback.
+        for candidate_str in (raw_value, self.DEFAULT_MODEL_PATH):
+            candidate = Path(candidate_str)
+            if candidate.is_absolute() and candidate.exists():
+                return str(candidate)
 
-        project_path = (ROOT_DIR / candidate).resolve()
-        if project_path.exists():
-            return str(project_path)
+            project_path = (ROOT_DIR / candidate).resolve()
+            if project_path.exists():
+                return str(project_path)
 
-        if candidate.exists():
-            return str(candidate.resolve())
+            if candidate.exists():
+                return str(candidate.resolve())
 
-        # Fall back to the upstream repo id when the configured path is missing but
-        # still looks like a repo identifier.
-        if "/" in raw_value and not raw_value.startswith("."):
-            return raw_value
+            # Repo-id style paths (e.g. "hexgrad/Kokoro-82M-v1.1-zh")
+            if "/" in candidate_str and not candidate_str.startswith("."):
+                return candidate_str
 
         raise RuntimeError(
             "Kokoro model path is not ready. Expected a local directory like "
-            f"`{(ROOT_DIR / self.DEFAULT_MODEL_PATH).resolve()}` or a valid repo id."
+            f"`{Path(self.DEFAULT_MODEL_PATH).resolve()}` or a valid repo id."
         )
+
+
+class FallbackTTS(OutputChannel):
+    """Respects the user's ``tts_engine`` preference:
+
+    - ``"fish_audio"`` → Fish Audio first, Kokoro as fallback
+    - ``"kokoro"``    → Kokoro only (no API call)
+    """
+
+    def __init__(self, primary: OutputChannel | None = None, fallback: OutputChannel | None = None):
+        self._primary = primary or FishTTS()
+        self._fallback = fallback or KokoroTTS()
+
+    def supports(self, channel_type: str) -> bool:
+        return channel_type in ("tts", "voice", "all")
+
+    async def send(self, content: str, metadata: dict | None = None) -> OutputResult:
+        pref = PreferenceStore()
+        engine = await pref.get("tts_engine") or "kokoro"
+
+        if engine == "kokoro":
+            return await self._fallback.send(content, metadata)
+
+        # engine == "fish_audio": primary first, fallback on failure
+        primary_result = await self._primary.send(content, metadata)
+        if primary_result.success:
+            return primary_result
+
+        fallback_result = await self._fallback.send(content, metadata)
+        if not fallback_result.success:
+            # Surface both errors so the user can debug
+            fallback_result.error = (
+                f"Fish Audio: {primary_result.error}  |  Kokoro: {fallback_result.error}"
+            )
+        return fallback_result
 
 
 def _extract_audio_chunk(item: object) -> np.ndarray | None:
@@ -240,30 +294,23 @@ def _float_audio_to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
 
 async def _play_audio(filepath: str) -> None:
     if sys.platform == "win32":
-        proc = await asyncio.create_subprocess_exec(
-            "powershell",
-            "-Command",
-            f'(New-Object System.Media.SoundPlayer "{filepath}").PlaySync()',
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        await proc.communicate()
+        # os.startfile opens the file with the system default player (reliable).
+        import os as _os
+        await asyncio.to_thread(_os.startfile, filepath)
+        await asyncio.sleep(0.5)
         return
 
     if sys.platform == "darwin":
         proc = await asyncio.create_subprocess_exec(
-            "afplay",
-            filepath,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            "afplay", filepath,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
         )
         await proc.communicate()
         return
 
+    # Linux fallback
     proc = await asyncio.create_subprocess_exec(
-        "aplay",
-        filepath,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+        "aplay", filepath,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
     )
     await proc.communicate()

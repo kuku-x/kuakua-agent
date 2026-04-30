@@ -7,18 +7,7 @@ from datetime import date, datetime, time, timedelta, timezone
 
 from kuakua_agent.schemas.summary import AppUsage, SummaryResponse
 from kuakua_agent.services.monitor.activitywatch import ActivityWatchClient
-
-WORK_KEYWORDS = {
-    "code", "cursor", "terminal", "powershell", "cmd", "pycharm", "idea", "intellij",
-    "webstorm", "goland", "rider", "clion", "datagrip", "notion", "obsidian", "word",
-    "excel", "powerpoint", "outlook", "mail", "slack", "teams", "zoom", "chrome",
-    "edge", "firefox", "arc", "postman", "figma", "github", "git",
-}
-
-ENTERTAINMENT_KEYWORDS = {
-    "spotify", "music", "netease", "qqmusic", "bilibili", "douyin", "youtube",
-    "netflix", "steam", "game", "discord", "weibo", "xiaohongshu",
-}
+from kuakua_agent.utils import guess_category, normalize_app_name, overlap_seconds, parse_aw_timestamp
 
 PRAISE_SUGGESTION_PROMPT = """你是用户的「夸夸」助手。请根据以下今日数据，生成两段内容。
 
@@ -27,55 +16,6 @@ PRAISE_SUGGESTION_PROMPT = """你是用户的「夸夸」助手。请根据以�
 
 直接输出如下 JSON 格式（不要额外文字）：
 {"praise": "夸奖内容", "suggestions": ["建议1", "建议2"]}"""
-
-APP_NAME_MAP = {
-    "msedge": "Microsoft Edge",
-    "chrome": "Google Chrome",
-    "firefox": "Mozilla Firefox",
-    "code": "Visual Studio Code",
-    "explorer": "文件资源管理器",
-    "electron": "Electron",
-    "obsidian": "Obsidian",
-    "qq": "QQ",
-    "wechat": "微信",
-    "dingtalk": "钉钉",
-    "feishu": "飞书",
-    "wps": "WPS Office",
-    "word": "Microsoft Word",
-    "excel": "Microsoft Excel",
-    "powerpoint": "Microsoft PowerPoint",
-    "outlook": "Microsoft Outlook",
-    "terminal": "Windows Terminal",
-    "powershell": "PowerShell",
-    "cmd": "命令提示符",
-    "pycharm": "PyCharm",
-    "idea": "IntelliJ IDEA",
-    "webstorm": "WebStorm",
-    "goland": "GoLand",
-    "rider": "JetBrains Rider",
-    "clion": "CLion",
-    "datagrip": "DataGrip",
-    "notion": "Notion",
-    "slack": "Slack",
-    "teams": "Microsoft Teams",
-    "zoom": "Zoom",
-    "discord": "Discord",
-    "spotify": "Spotify",
-    "music": "网易云音乐",
-    "qqmusic": "QQ音乐",
-    "netease": "网易云音乐",
-    "bilibili": "哔哩哔哩",
-    "douyin": "抖音",
-    "youtube": "YouTube",
-    "netflix": "Netflix",
-    "steam": "Steam",
-    "postman": "Postman",
-    "figma": "Figma",
-    "github": "GitHub",
-    "git": "Git",
-    "cursor": "Cursor",
-    "arc": "Arc Browser",
-}
 
 
 @dataclass
@@ -148,30 +88,30 @@ class SummaryService:
         stats = _UsageStats()
 
         for event in window_events:
-            started_at = self._parse_dt(event.get("timestamp"))
+            started_at = parse_aw_timestamp(event.get("timestamp"))
             duration = max(float(event.get("duration", 0) or 0), 0)
             if started_at is None or duration <= 0:
                 continue
 
             ended_at = started_at + timedelta(seconds=duration)
-            overlap_seconds = self._overlap_seconds(started_at, ended_at, start_utc, end_utc)
-            if overlap_seconds <= 0:
+            overlap = overlap_seconds(started_at, ended_at, start_utc, end_utc)
+            if overlap <= 0:
                 continue
 
             app_name = self._normalize_app_name(event.get("data", {}))
             category = self._categorize_app(app_name)
 
-            app_usage[app_name] += overlap_seconds
-            stats.total_seconds += overlap_seconds
+            app_usage[app_name] += overlap
+            stats.total_seconds += overlap
 
             if category == "work":
-                stats.work_seconds += overlap_seconds
-                stats.productive_seconds += overlap_seconds
-                stats.focus_app_seconds[app_name] += overlap_seconds
+                stats.work_seconds += overlap
+                stats.productive_seconds += overlap
+                stats.focus_app_seconds[app_name] += overlap
             elif category == "entertainment":
-                stats.entertainment_seconds += overlap_seconds
+                stats.entertainment_seconds += overlap
             else:
-                stats.other_seconds += overlap_seconds
+                stats.other_seconds += overlap
 
         total_hours = self._round_hours(stats.total_seconds)
         work_hours = self._round_hours(stats.work_seconds)
@@ -336,58 +276,19 @@ class SummaryService:
         except (json.JSONDecodeError, AttributeError):
             return raw.strip(), []
 
-    def _parse_dt(self, value: object) -> datetime | None:
-        if not isinstance(value, str):
-            return None
-        try:
-            return datetime.fromisoformat(value)
-        except ValueError:
-            return None
-
-    def _overlap_seconds(
-        self,
-        start: datetime,
-        end: datetime,
-        range_start: datetime,
-        range_end: datetime,
-    ) -> float:
-        overlap_start = max(start, range_start)
-        overlap_end = min(end, range_end)
-        return max((overlap_end - overlap_start).total_seconds(), 0.0)
-
     def _normalize_app_name(self, data: object) -> str:
         if not isinstance(data, dict):
             return "Unknown"
-
         app = str(data.get("app") or "").strip()
         title = str(data.get("title") or "").strip()
-
         if app:
-            return self._display_app_name(app)
+            return normalize_app_name(app)
         if title:
             return title[:40]
         return "Unknown"
 
-    def _display_app_name(self, app: str) -> str:
-        app_key = app.lower()
-        if app_key.endswith(".exe"):
-            app_key = app_key[:-4]
-
-        normalized = APP_NAME_MAP.get(app_key)
-        if normalized:
-            return normalized
-
-        if app.lower().endswith(".exe"):
-            return app[:-4]
-        return app
-
     def _categorize_app(self, app_name: str) -> str:
-        app_lower = app_name.lower()
-        if any(keyword in app_lower for keyword in ENTERTAINMENT_KEYWORDS):
-            return "entertainment"
-        if any(keyword in app_lower for keyword in WORK_KEYWORDS):
-            return "work"
-        return "other"
+        return guess_category(app_name)
 
     def _calculate_focus_score(self, stats: _UsageStats) -> int:
         if stats.total_seconds <= 0:

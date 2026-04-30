@@ -16,7 +16,7 @@ class ProfileStore:
             ("rest", 0.4, ["休息", "午休", "放空"]),
             ("entertainment", 0.3, ["视频", "游戏", "社交"]),
         ]
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             for scene, weight, keywords in defaults:
                 await conn.execute(
                     "INSERT OR IGNORE INTO scene_profiles (scene, weight, keywords) VALUES (?, ?, ?)",
@@ -31,20 +31,20 @@ class ProfileStore:
 
     async def get_all(self) -> list[SceneProfile]:
         await self._ensure_initialized()
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             async with conn.execute("SELECT * FROM scene_profiles ORDER BY weight DESC") as cursor:
                 rows = await cursor.fetchall()
             return [SceneProfile.from_row(r) for r in rows]
 
     async def get_by_scene(self, scene: str) -> SceneProfile | None:
         await self._ensure_initialized()
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             async with conn.execute("SELECT * FROM scene_profiles WHERE scene = ?", (scene,)) as cursor:
                 row = await cursor.fetchone()
             return SceneProfile.from_row(row) if row else None
 
     async def update_weight(self, scene: str, weight: float) -> bool:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             cursor = await conn.execute(
                 "UPDATE scene_profiles SET weight = ?, updated_at = ? WHERE scene = ?",
                 (weight, datetime.now().isoformat(), scene),
@@ -53,7 +53,7 @@ class ProfileStore:
             return cursor.rowcount > 0
 
     async def update_keywords(self, scene: str, keywords: list[str]) -> bool:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             cursor = await conn.execute(
                 "UPDATE scene_profiles SET keywords = ?, updated_at = ? WHERE scene = ?",
                 (json.dumps(keywords, ensure_ascii=False), datetime.now().isoformat(), scene),

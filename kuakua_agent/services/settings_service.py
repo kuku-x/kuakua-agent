@@ -26,6 +26,7 @@ class SettingsService:
             aw_server_url=self._pref.get_sync("aw_server_url") or "http://127.0.0.1:5600",
             data_masking=self._pref.get_bool_sync("data_masking"),
             doubao_api_key_set=bool(self._pref.get_sync("model_api_key") or settings.llm_api_key),
+            fish_audio_api_key_set=bool(self._pref.get_sync("fish_audio_api_key") or settings.fish_audio_api_key),
         )
 
     def update_settings(self, payload: SettingsPayload) -> SettingsResponse:
@@ -34,6 +35,9 @@ class SettingsService:
 
         if payload.doubao_api_key is not None:
             self._pref.set_sync("model_api_key", payload.doubao_api_key.strip())
+
+        if payload.fish_audio_api_key is not None:
+            self._pref.set_sync("fish_audio_api_key", payload.fish_audio_api_key.strip())
 
         return self.get_settings()
 
@@ -49,7 +53,7 @@ class SettingsService:
 
     async def delete_all_data_async(self) -> None:
         old_pref = self._pref
-        db = old_pref._db if hasattr(old_pref, "_db") else Database()
+        db = old_pref.db
         tables = [
             "milestones",
             "praise_history",
@@ -62,7 +66,7 @@ class SettingsService:
             "daily_usage_summary",
             "user_preferences",
         ]
-        async with db._get_conn() as conn:
+        async with db.get_conn() as conn:
             for table in tables:
                 await conn.execute(f"DELETE FROM {table}")
             await conn.commit()

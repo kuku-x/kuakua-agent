@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 
 from kuakua_agent.config import settings
 from kuakua_agent.core.logging import get_logger

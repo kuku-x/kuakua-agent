@@ -101,4 +101,10 @@ export const getLatestNightlySummary = () =>
 export const markNightlySummaryRead = () =>
   api.post<ApiResponse<{ ok: boolean }>>('/usage/nightly-summary/mark-read')
 
+export const listTtsVoices = (engine: string) =>
+  api.get<ApiResponse<Array<{ id: string; title: string; tags?: string[] }>>>(
+    '/settings/praise/tts/voices',
+    { params: { engine } },
+  )
+
 export default api

@@ -20,7 +20,7 @@ class DailyUsageSummaryDb:
         self._db = db or Database()
 
     async def _async_get(self, date: str) -> DailyUsageSummary | None:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             cursor = await conn.execute(
                 "SELECT date, payload_json, created_at, updated_at FROM daily_usage_summary WHERE date = ?",
                 (date,),
@@ -49,7 +49,7 @@ class DailyUsageSummaryDb:
 
     async def _async_upsert(self, *, date: str, payload_json: str, now_ts: int | None = None) -> None:
         ts = int(now_ts or time.time())
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             await conn.execute(
                 """
                 INSERT INTO daily_usage_summary (date, payload_json, created_at, updated_at)
@@ -78,7 +78,7 @@ class DailyUsageSummaryDb:
 
     async def _async_list_recent(self, *, days: int = 14) -> list[DailyUsageSummary]:
         limit = max(1, min(int(days), 366))
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             cursor = await conn.execute(
                 """
                 SELECT date, payload_json, created_at, updated_at

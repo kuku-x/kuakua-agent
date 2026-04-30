@@ -80,12 +80,14 @@ export interface SettingsPayload {
   aw_server_url: string
   data_masking: boolean
   doubao_api_key?: string
+  fish_audio_api_key?: string
 }
 
 export interface SettingsResponse {
   aw_server_url: string
   data_masking: boolean
   doubao_api_key_set: boolean
+  fish_audio_api_key_set: boolean
 }
 
 export interface NightlySummary {
@@ -104,13 +106,21 @@ export interface ActivityWatchStatus {
 export interface PraiseConfig {
   praise_auto_enable: boolean
   tts_enable: boolean
+  tts_engine: 'kokoro' | 'fish_audio'
   kokoro_voice: string
   kokoro_model_path: string
+  fish_audio_voice_id: string
   tts_speed: number
   do_not_disturb_start: string
   do_not_disturb_end: string
   nightly_summary_enable: boolean
   nightly_summary_time: string
+}
+
+export interface TtsVoice {
+  id: string
+  title: string
+  tags?: string[]
 }
 
 export interface MilestoneResponse {

@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
-import re
+from fastapi.responses import StreamingResponse
 
 from kuakua_agent.schemas.chat import ChatRequest, ChatResponse
 from kuakua_agent.schemas.common import ApiResponse
@@ -20,12 +19,20 @@ from kuakua_agent.services.integrations import get_integration_registry
 from kuakua_agent.services.storage_layer import MilestoneStore, PraiseHistoryStore, PreferenceStore, ProfileStore, FeedbackStore
 from kuakua_agent.services.settings_service import get_settings_service
 from kuakua_agent.services.monitor.summary_service import SummaryService
+from kuakua_agent.config import ROOT_DIR, settings
+from kuakua_agent.utils import guess_category, normalize_app_name, overlap_seconds, parse_aw_timestamp
 
 router = APIRouter()
-summary_service = SummaryService()
 chat_service = ChatService()
 settings_service = get_settings_service()
 integration_registry = get_integration_registry()
+
+
+def _get_summary_service() -> SummaryService:
+    """Return a SummaryService that uses the user-configured ActivityWatch URL."""
+    aw_url = settings_service.get_settings().aw_server_url
+    client = ActivityWatchClient(base_url=aw_url)
+    return SummaryService(client=client)
 
 
 @router.get("/health", response_model=ApiResponse[dict[str, str]])
@@ -69,14 +76,64 @@ async def integration_health(name: str) -> ApiResponse[IntegrationHealthResponse
     )
 
 
+@router.get("/debug/summary-raw")
+async def debug_summary_raw(date: str | None = None):
+    """Debug: show raw summary calculation details."""
+    target = date or datetime.now().strftime("%Y-%m-%d")
+    svc = _get_summary_service()
+    day = datetime.strptime(target, "%Y-%m-%d").date()
+    from datetime import time, timedelta
+    start_local = datetime.combine(day, time.min, tzinfo=svc._local_tz)
+    end_local = start_local + timedelta(days=1)
+    start_utc = start_local.astimezone(timezone.utc)
+    end_utc = end_local.astimezone(timezone.utc)
+
+    buckets = svc._client.get_main_buckets()
+    window_bucket = buckets.get("window")
+    if not window_bucket:
+        return {"error": "no window bucket"}
+
+    events = svc._client.get_events(window_bucket, start=start_utc, end=end_utc, limit=5000)
+    total_duration = sum(float(e.get("duration", 0) or 0) for e in events)
+    total_overlap = 0.0
+    for e in events:
+        ts = e.get("timestamp")
+        dur = float(e.get("duration", 0) or 0)
+        if not ts or dur <= 0:
+            continue
+        try:
+            st = datetime.fromisoformat(ts)
+        except ValueError:
+            continue
+        if st.tzinfo is None:
+            st = st.replace(tzinfo=timezone.utc)
+        et = st + timedelta(seconds=dur)
+        o = overlap_seconds(st, et, start_utc, end_utc)
+        total_overlap += o
+
+    return {
+        "target_date": target,
+        "local_tz": str(svc._local_tz),
+        "start_utc": start_utc.isoformat(),
+        "end_utc": end_utc.isoformat(),
+        "event_count": len(events),
+        "total_raw_duration_hours": round(total_duration / 3600, 2),
+        "total_overlap_hours": round(total_overlap / 3600, 2),
+        "sample_events": [
+            {"ts": e.get("timestamp"), "dur": e.get("duration"), "app": (e.get("data", {}) or {}).get("app", "?")}
+            for e in events[:5]
+        ],
+    }
+
+
 @router.get("/summary/today", response_model=ApiResponse[SummaryResponse])
 async def get_today_summary() -> ApiResponse[SummaryResponse]:
-    return ApiResponse(data=summary_service.get_today_summary())
+    return ApiResponse(data=_get_summary_service().get_today_summary())
 
 
 @router.get("/summary/{date}", response_model=ApiResponse[SummaryResponse])
 async def get_summary(date: str) -> ApiResponse[SummaryResponse]:
-    return ApiResponse(data=summary_service.get_summary(date))
+    return ApiResponse(data=_get_summary_service().get_summary(date))
 
 
 @router.get("/nightly-summary/{date}", response_model=ApiResponse[dict])
@@ -184,6 +241,30 @@ async def delete_all_data() -> ApiResponse[dict[str, bool]]:
     return ApiResponse(data={"deleted": True})
 
 
+# GET /settings/praise/tts/voices
+@router.get("/settings/praise/tts/voices")
+async def list_tts_voices(engine: str = "kokoro") -> ApiResponse[list[dict]]:
+    """List available voices for a TTS engine."""
+    if engine == "fish_audio":
+        # Read curated voice list from local JSON file
+        voices_file = ROOT_DIR / "data" / "fish_audio_voices.json"
+        if voices_file.exists():
+            import json as _json
+            try:
+                voices = _json.loads(voices_file.read_text(encoding="utf-8"))
+                return ApiResponse(data=voices)
+            except Exception:
+                pass
+        return ApiResponse(data=[], message="Voice list file not found or invalid")
+
+    # Default: Kokoro voices
+    return ApiResponse(data=[
+        {"id": f"zf_{i:03d}", "title": f"女声 {i:03d}"} for i in range(1, 33)
+    ] + [
+        {"id": f"zm_{i:03d}", "title": f"男声 {i:03d}"} for i in range(1, 11)
+    ])
+
+
 # GET /settings/praise
 @router.get("/settings/praise", response_model=ApiResponse[PraiseConfig])
 async def get_praise_config() -> ApiResponse[PraiseConfig]:
@@ -191,8 +272,10 @@ async def get_praise_config() -> ApiResponse[PraiseConfig]:
     return ApiResponse(data=PraiseConfig(
         praise_auto_enable=await pref.get_bool("praise_auto_enable"),
         tts_enable=await pref.get_bool("tts_enable"),
+        tts_engine=await pref.get("tts_engine") or "kokoro",
         kokoro_voice=await pref.get("kokoro_voice") or await pref.get("tts_voice") or "zf_001",
         kokoro_model_path=await pref.get("kokoro_model_path") or "./ckpts/kokoro-v1.1",
+        fish_audio_voice_id=await pref.get("fish_audio_voice_id") or "",
         tts_speed=await pref.get_float("tts_speed", 1.0),
         do_not_disturb_start=await pref.get("do_not_disturb_start") or "22:00",
         do_not_disturb_end=await pref.get("do_not_disturb_end") or "08:00",
@@ -207,10 +290,11 @@ async def update_praise_config(payload: PraiseConfig) -> ApiResponse[PraiseConfi
     pref = PreferenceStore()
     await pref.set("praise_auto_enable", str(payload.praise_auto_enable).lower())
     await pref.set("tts_enable", str(payload.tts_enable).lower())
+    await pref.set("tts_engine", payload.tts_engine)
     await pref.set("kokoro_voice", payload.kokoro_voice)
-    # Keep the legacy field in sync until older clients are fully migrated.
-    await pref.set("tts_voice", payload.kokoro_voice)
+    await pref.set("tts_voice", payload.kokoro_voice)  # legacy sync
     await pref.set("kokoro_model_path", payload.kokoro_model_path.strip())
+    await pref.set("fish_audio_voice_id", payload.fish_audio_voice_id.strip())
     await pref.set("tts_speed", str(payload.tts_speed))
     await pref.set("do_not_disturb_start", payload.do_not_disturb_start)
     await pref.set("do_not_disturb_end", payload.do_not_disturb_end)
@@ -240,7 +324,6 @@ async def get_milestones() -> ApiResponse[list[MilestoneResponse]]:
 # POST /memory/milestones
 @router.post("/memory/milestones", response_model=ApiResponse[MilestoneResponse])
 async def create_milestone(payload: MilestoneCreate) -> ApiResponse[MilestoneResponse]:
-    from datetime import datetime
     occurred = None
     if payload.occurred_at:
         try:
@@ -278,6 +361,51 @@ async def submit_feedback(payload: FeedbackCreate) -> ApiResponse[dict]:
     return ApiResponse(data={"recorded": True})
 
 
+# ============ 调试 / 测试 ============
+
+@router.post("/debug/trigger-praise")
+async def trigger_praise_test(
+    message: str = "今天你很棒，继续保持呀！",
+    trigger: str = "manual_test",
+):
+    """手动触发一次夸夸（含 TTS 播报），返回每个通道的详细结果。"""
+    from kuakua_agent.services.notification import FallbackTTS, SystemNotifier, OutputManager
+    from kuakua_agent.services.storage_layer import PreferenceStore
+
+    pref = PreferenceStore()
+    tts_enabled = await pref.get_bool("tts_enable")
+    tts_engine = await pref.get("tts_engine") or "kokoro"
+    api_key_set = bool(
+        await pref.get("fish_audio_api_key")
+        or getattr(settings, "fish_audio_api_key", "")
+    )
+    voice_id = await pref.get("fish_audio_voice_id") or ""
+
+    mgr = OutputManager()
+    mgr.register(SystemNotifier())
+    mgr.register(FallbackTTS())
+    results = await mgr.dispatch(
+        message,
+        channel_types=["notification", "tts"],
+        metadata={"title": "夸夸测试", "trigger": trigger},
+    )
+
+    return {
+        "ok": True,
+        "message": message,
+        "config": {
+            "tts_enabled": tts_enabled,
+            "tts_engine": tts_engine,
+            "fish_key_set": api_key_set,
+            "fish_voice_id": voice_id or "(未设置)",
+        },
+        "channels": [
+            {"channel": r.channel, "success": r.success, "error": r.error}
+            for r in results
+        ],
+    }
+
+
 # ============ 手机数据聚合查询 ============
 
 @router.get("/usage/aggregate", response_model=ApiResponse[dict])
@@ -285,9 +413,8 @@ async def get_aggregated_usage(date: str, device_id: str | None = None):
     """
     聚合查询电脑 + 手机使用数据
     """
-    from datetime import datetime, timedelta
-    from ..services.phone_usage_service import get_phone_usage_service
-    from ..services.activitywatch import ActivityWatchClient
+    from ..services.monitor.phone_usage_service import get_phone_usage_service
+    from ..services.monitor.activitywatch import ActivityWatchClient
     from ..services.settings_service import get_settings_service
 
     phone_service = get_phone_usage_service()
@@ -327,7 +454,7 @@ async def get_aggregated_usage(date: str, device_id: str | None = None):
             phone_by_package[key] = {
                 "name": app_name,
                 "seconds": int(entry.duration_seconds),
-                "category": _guess_category(app_name),
+                "category": guess_category(app_name),
             }
     phone_top_apps = [
         {
@@ -387,32 +514,32 @@ def _get_computer_usage_from_aw(aw_client, start: datetime, end: datetime) -> di
     # 按 App 分组统计时长
     app_times: dict[str, float] = {}
     for event in events:
-        started_at = _parse_aw_dt(event.get("timestamp"))
+        started_at = parse_aw_timestamp(event.get("timestamp"))
         duration = max(float(event.get("duration", 0) or 0), 0.0)
         if started_at is None or duration <= 0:
             continue
 
         ended_at = started_at + timedelta(seconds=duration)
-        overlap_seconds = _overlap_seconds(started_at, ended_at, start, end)
-        if overlap_seconds <= 0:
+        overlap = overlap_seconds(started_at, ended_at, start, end)
+        if overlap <= 0:
             continue
 
         data = event.get("data", {})
-        app = _normalize_computer_app_name(data.get("app", data.get("title", "Unknown")))
+        app = normalize_app_name(data.get("app", data.get("title", "Unknown")))
         if app in app_times:
-            app_times[app] += overlap_seconds
+            app_times[app] += overlap
         else:
-            app_times[app] = overlap_seconds
+            app_times[app] = overlap
 
     total_seconds = sum(app_times.values())
     top_apps = [
-        {"name": name, "duration": secs, "seconds": secs, "hours": round(secs / 3600, 1), "category": _guess_category(name)}
+        {"name": name, "duration": secs, "seconds": secs, "hours": round(secs / 3600, 1), "category": guess_category(name)}
         for name, secs in sorted(app_times.items(), key=lambda x: x[1], reverse=True)[:10]
     ]
 
     # 粗略估算工作/娱乐时间
-    work_hours = sum(secs / 3600 for name, secs in app_times.items() if _guess_category(name) == "work")
-    entertainment_hours = sum(secs / 3600 for name, secs in app_times.items() if _guess_category(name) == "entertainment")
+    work_hours = sum(secs / 3600 for name, secs in app_times.items() if guess_category(name) == "work")
+    entertainment_hours = sum(secs / 3600 for name, secs in app_times.items() if guess_category(name) == "entertainment")
 
     return {
         "total_seconds": total_seconds,
@@ -420,59 +547,3 @@ def _get_computer_usage_from_aw(aw_client, start: datetime, end: datetime) -> di
         "work_hours": round(work_hours, 1),
         "entertainment_hours": round(entertainment_hours, 1)
     }
-
-
-def _parse_aw_dt(value: object) -> datetime | None:
-    if not isinstance(value, str):
-        return None
-    try:
-        dt = datetime.fromisoformat(value)
-    except ValueError:
-        return None
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
-def _overlap_seconds(start: datetime, end: datetime, range_start: datetime, range_end: datetime) -> float:
-    overlap_start = max(start, range_start)
-    overlap_end = min(end, range_end)
-    return max((overlap_end - overlap_start).total_seconds(), 0.0)
-
-
-def _guess_category(app_name: str) -> str:
-    """根据 App 名称猜测分类"""
-    app_lower = app_name.lower()
-
-    work_keywords = ["code", "vscode", "idea", "pycharm", "webstorm", "terminal", "cmd", "powershell",
-                    "notion", "obsidian", "evernote", "word", "excel", "ppt", "pdf", "mail", "outlook",
-                    "slack", "feishu", "dingtalk", "wechat work", "企业微信", "钉钉", "飞书"]
-
-    entertainment_keywords = ["youtube", "bilibili", "抖音", "tiktok", "netflix", "spotify", "music",
-                            "游戏", "game", "steam", "epic", "lol", "原神", "genshin", "minecraft",
-                            "微博", "twitter", "x.com", "reddit", "zhihu", "知乎", "douyin"]
-
-    for kw in work_keywords:
-        if kw in app_lower:
-            return "work"
-    for kw in entertainment_keywords:
-        if kw in app_lower:
-            return "entertainment"
-    return "other"
-
-
-def _normalize_computer_app_name(app_name: str) -> str:
-    """Normalize noisy process names to user-friendly app names."""
-    if not app_name:
-        return "Unknown"
-
-    value = str(app_name).strip()
-    lowered = value.lower()
-
-    # Cursor helper process names like CursorLoginUp812 -> Cursor
-    if re.fullmatch(r"cursorloginup\d+", lowered):
-        return "Cursor"
-
-    if lowered.endswith(".exe"):
-        value = value[:-4]
-    return value or "Unknown"

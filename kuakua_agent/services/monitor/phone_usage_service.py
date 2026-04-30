@@ -8,6 +8,7 @@ from typing import Optional
 
 from ...schemas.phone_usage import PhoneUsageEntry
 from ...utils.atomic_write import write_json_atomic
+from ...utils.shared import guess_category
 from ..user_behavior.phone_usage_db import PhoneUsageDb
 
 logger = logging.getLogger(__name__)
@@ -285,20 +286,11 @@ class PhoneUsageService:
 
     def get_entertainment_seconds(self, entries: list[PhoneUsageEntry]) -> int:
         """计算娱乐类 App 的总使用秒数"""
-        entertainment_keywords = [
-            "抖音", "bilibili", "youtube", "tiktok", "微博", "知乎",
-            "小红书", "快手", "虎牙", "斗鱼", "网易云", "qq音乐",
-            "游戏", "game", "原神", "王者", "lol", "minecraft"
-        ]
-
-        total = 0
-        for entry in entries:
-            name_lower = entry.app_name.lower()
-            for kw in entertainment_keywords:
-                if kw.lower() in name_lower:
-                    total += entry.duration_seconds
-                    break
-        return total
+        return sum(
+            e.duration_seconds
+            for e in entries
+            if guess_category(e.app_name) == "entertainment"
+        )
 
 
 # 全局实例

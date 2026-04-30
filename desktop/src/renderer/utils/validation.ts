@@ -151,5 +151,6 @@ export function normalizeSettings(value: unknown): SettingsResponse {
     aw_server_url: asString(item.aw_server_url, 'http://127.0.0.1:5600'),
     data_masking: Boolean(item.data_masking),
     doubao_api_key_set: Boolean(item.doubao_api_key_set),
+    fish_audio_api_key_set: Boolean((item as any).fish_audio_api_key_set),
   }
 }

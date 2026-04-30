@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -72,7 +73,6 @@ class SceneProfile:
 
     @classmethod
     def from_row(cls, row: Any) -> "SceneProfile":
-        import json
         return cls(
             id=row["id"],
             scene=row["scene"],

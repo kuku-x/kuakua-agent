@@ -47,14 +47,8 @@ function shouldUseCachedSummary(cached: SummaryData | null, incoming: SummaryDat
   if (!cached) return false
   if (cached.date !== incoming.date) return false
   if (incoming.date !== getTodayDateString()) return false
-
-  return (
-    cached.total_hours > incoming.total_hours ||
-    cached.work_hours > incoming.work_hours ||
-    cached.entertainment_hours > incoming.entertainment_hours ||
-    cached.other_hours > incoming.other_hours ||
-    cached.top_apps.length > incoming.top_apps.length
-  )
+  // Only fall back to cache when the fresh response is clearly empty / errored
+  return incoming.total_hours <= 0 && incoming.top_apps.length === 0
 }
 
 function mergeSummaryWithAggregate(summary: SummaryData, aggregate: AggregatedUsage): SummaryData {
@@ -118,9 +112,14 @@ function mergeSummaryWithAggregate(summary: SummaryData, aggregate: AggregatedUs
 
   const computerTotal = aggregate.computer?.total_hours ?? 0
   const phoneTotal = aggregate.phone?.total_hours ?? 0
-  const combinedTotal = aggregate.combined?.total_hours ?? (computerTotal + phoneTotal)
-  const workHours = aggregate.combined?.work_hours ?? summary.work_hours
-  const entertainmentHours = aggregate.combined?.entertainment_hours ?? summary.entertainment_hours
+  // Use summary data as primary; aggregate only adds phone breakdown.
+  // max() prevents aggregate from shrinking already-correct summary values.
+  const combinedTotal = Math.max(
+    summary.total_hours,
+    aggregate.combined?.total_hours ?? (computerTotal + phoneTotal),
+  )
+  const workHours = Math.max(summary.work_hours, aggregate.combined?.work_hours ?? 0)
+  const entertainmentHours = Math.max(summary.entertainment_hours, aggregate.combined?.entertainment_hours ?? 0)
   const otherHours = Math.max(0, combinedTotal - workHours - entertainmentHours)
 
   return {

@@ -61,7 +61,7 @@ class PhoneUsageDb:
         ]
         if not rows:
             return
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             await conn.executemany(
                 """
                 INSERT INTO phone_usage_events (
@@ -116,7 +116,7 @@ class PhoneUsageDb:
         if not event_ids:
             return set()
         placeholders = ",".join(["?"] * len(event_ids))
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             cursor = await conn.execute(
                 f"""
                 SELECT event_id
@@ -164,7 +164,7 @@ class PhoneUsageDb:
         ]
         if not rows:
             return
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             await conn.executemany(
                 """
                 INSERT OR IGNORE INTO phone_processed_events (
@@ -221,7 +221,7 @@ class PhoneUsageDb:
         entry: PhoneUsageEntry,
         updated_at: int,
     ) -> None:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             await conn.execute(
                 """
                 INSERT INTO phone_daily_usage (
@@ -282,7 +282,7 @@ class PhoneUsageDb:
     async def _async_get_daily_usage(
         self, device_id: str, usage_date: str
     ) -> list[PhoneDailyAppUsage]:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             cursor = await conn.execute(
                 """
                 SELECT device_id, usage_date, package_name, app_name,
@@ -325,7 +325,7 @@ class PhoneUsageDb:
     async def _async_get_daily_usage_all_devices(
         self, usage_date: str
     ) -> dict[str, list[PhoneDailyAppUsage]]:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             cursor = await conn.execute(
                 """
                 SELECT device_id, usage_date, package_name, app_name,

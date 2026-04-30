@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import logging
-from langgraph.graph import StateGraph, END
 
 from kuakua_agent.services.ai_engine.graph.state import PraiseState
 from kuakua_agent.services.ai_engine.graph.nodes import (
@@ -14,7 +15,7 @@ from kuakua_agent.services.ai_engine.graph.edges import should_refine
 logger = logging.getLogger(__name__)
 
 
-def build_praise_graph() -> StateGraph:
+def build_praise_graph() -> "StateGraph":
     """
     Build the LangGraph praise generation workflow.
 
@@ -27,6 +28,8 @@ def build_praise_graph() -> StateGraph:
                                                     ↓
                                format_output → END
     """
+    from langgraph.graph import StateGraph, END  # lazy import
+
     workflow = StateGraph(PraiseState)
 
     # Add nodes

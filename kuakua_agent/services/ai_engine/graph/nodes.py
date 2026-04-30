@@ -6,37 +6,11 @@ from kuakua_agent.services.notification.weather import WeatherService
 
 logger = logging.getLogger(__name__)
 
-# Singleton instances for nodes
-_context_builder: ContextBuilder | None = None
-_model_adapter: ModelAdapter | None = None
-_weather_service: WeatherService | None = None
-
-
-def _get_context_builder() -> ContextBuilder:
-    global _context_builder
-    if _context_builder is None:
-        _context_builder = ContextBuilder()
-    return _context_builder
-
-
-def _get_model_adapter() -> ModelAdapter:
-    global _model_adapter
-    if _model_adapter is None:
-        _model_adapter = ModelAdapter()
-    return _model_adapter
-
-
-def _get_weather_service() -> WeatherService:
-    global _weather_service
-    if _weather_service is None:
-        _weather_service = WeatherService()
-    return _weather_service
-
 
 async def gather_context_node(state: PraiseState) -> PraiseState:
     """Collect context for proactive praise generation."""
-    context_builder = _get_context_builder()
-    weather = _get_weather_service()
+    context_builder = ContextBuilder()
+    weather = WeatherService()
 
     trigger_type = state.get("milestone", {}).get("event_type", "scheduled")
     env_context = str(state.get("milestone", {}))
@@ -55,7 +29,7 @@ async def gather_context_node(state: PraiseState) -> PraiseState:
 
 async def generate_draft_node(state: PraiseState) -> PraiseState:
     """Generate draft praise using the model."""
-    model = _get_model_adapter()
+    model = ModelAdapter()
     messages = state["messages"]
 
     try:
@@ -88,7 +62,7 @@ EVALUATION_PROMPT_TEMPLATE = """你是一个严格的夸夸质量评审员。请
 
 async def self_evaluate_node(state: PraiseState) -> PraiseState:
     """Self-evaluate the draft praise for quality control."""
-    model = _get_model_adapter()
+    model = ModelAdapter()
     draft = state.get("draft_praise", "")
 
     if not draft:
@@ -130,7 +104,7 @@ REFINE_PROMPT_TEMPLATE = """请根据以下评估意见，重写夸夸内容：
 
 async def refine_praise_node(state: PraiseState) -> PraiseState:
     """Refine the draft praise based on evaluation feedback."""
-    model = _get_model_adapter()
+    model = ModelAdapter()
     draft = state.get("draft_praise", "")
     evaluation = state.get("evaluation", "")
     refine_history = state.get("refine_history", [])
@@ -161,7 +135,7 @@ FORMAT_SYSTEM_PROMPT = """你是一个输出格式化助手。请确保夸夸内
 
 async def format_output_node(state: PraiseState) -> PraiseState:
     """Format the final praise output."""
-    model = _get_model_adapter()
+    model = ModelAdapter()
     draft = state.get("draft_praise", "")
 
     if not draft:

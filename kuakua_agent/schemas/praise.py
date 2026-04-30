@@ -4,8 +4,10 @@ from pydantic import BaseModel, Field
 class PraiseConfig(BaseModel):
     praise_auto_enable: bool = True
     tts_enable: bool = False
+    tts_engine: str = "kokoro"  # "kokoro" | "fish_audio"
     kokoro_voice: str = "zf_001"
     kokoro_model_path: str = "./ckpts/kokoro-v1.1"
+    fish_audio_voice_id: str = ""
     tts_speed: float = 1.0
     do_not_disturb_start: str = "22:00"
     do_not_disturb_end: str = "08:00"

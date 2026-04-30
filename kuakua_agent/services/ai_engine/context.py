@@ -192,8 +192,7 @@ class ContextBuilder:
         profiles = await self._profile.get_all()
         top_scene = profiles[0].scene if profiles else "通用陪伴"
         scene_context = f"主要场景: {top_scene}"
-        _recent_milestones = unrecalled if unrecalled else await self._ms.get_recent(hours=72, limit=10)
-        recent_highlight = await self._build_recent_highlight(_recent_milestones)
+        recent_highlight = await self._build_recent_highlight(unrecalled)
         recent_usage_summary = self._build_recent_usage_summary(days=7)
 
         # 构建向量检索上下文（跨时间上下文联想）

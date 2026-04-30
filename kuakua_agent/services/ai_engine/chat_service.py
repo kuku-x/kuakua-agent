@@ -21,21 +21,30 @@ class ChatService:
         self._prompt_mgr = PraisePromptManager()
         self._weather = WeatherService()
 
-    async def reply(self, request: ChatRequest) -> ChatResponse:
-        started = time.perf_counter()
-        chat_id = request.chat_id
-        user_message = request.message
-        history = self._history_store.get_conversation(chat_id, limit=MAX_HISTORY * 2)
+    # -- shared message preparation ------------------------------------------------
 
+    async def _prepare_messages(self, request: ChatRequest) -> tuple[str, list[dict]]:
+        """Build the message list and return (chat_id, messages)."""
+        history = self._history_store.get_conversation(request.chat_id, limit=MAX_HISTORY * 2)
         weather = self._weather.get_weather_summary()
+
         base_messages, enriched_prompt = await self._context_builder.build_user_context(
-            user_message=user_message,
+            user_message=request.message,
             weather=weather,
         )
-        if self._context_builder.should_use_chat_history(user_message):
+
+        if self._context_builder.should_use_chat_history(request.message):
             messages = [*base_messages[:1], *history, {"role": "user", "content": enriched_prompt}]
         else:
             messages = base_messages
+
+        return request.chat_id, messages
+
+    # -- synchronous reply --------------------------------------------------------
+
+    async def reply(self, request: ChatRequest) -> ChatResponse:
+        started = time.perf_counter()
+        chat_id, messages = await self._prepare_messages(request)
 
         used_fallback = False
         try:
@@ -46,14 +55,19 @@ class ChatService:
             )
         except Exception:
             used_fallback = True
-            assistant_reply = self._prompt_mgr.build_fallback_reply("最近在持续投入当下的事情")
+            assistant_reply = self._prompt_mgr.build_fallback_reply(
+                "最近在持续投入当下的事情"
+            )
             logger.exception(
                 "chat_reply_model_failed",
-                extra={"module_name": "chat", "event": "reply_model_error", "error_code": "LLM_CALL_FAILED"},
+                extra={
+                    "module_name": "chat",
+                    "event": "reply_model_error",
+                    "error_code": "LLM_CALL_FAILED",
+                },
             )
 
-        self._history_store.add_message(chat_id, "user", user_message)
-        self._history_store.add_message(chat_id, "assistant", assistant_reply)
+        self._save(chat_id, request.message, assistant_reply)
         duration_ms = int((time.perf_counter() - started) * 1000)
         logger.info(
             "chat_reply_completed",
@@ -64,25 +78,13 @@ class ChatService:
                 "fallback": used_fallback,
             },
         )
-
         return ChatResponse(reply=assistant_reply.strip())
 
-    async def reply_stream(self, request: ChatRequest) -> AsyncIterator[str]:
-        """流式回复，逐块产出文本片段"""
-        started = time.perf_counter()
-        chat_id = request.chat_id
-        user_message = request.message
-        history = self._history_store.get_conversation(chat_id, limit=MAX_HISTORY * 2)
+    # -- streaming reply ----------------------------------------------------------
 
-        weather = self._weather.get_weather_summary()
-        base_messages, enriched_prompt = await self._context_builder.build_user_context(
-            user_message=user_message,
-            weather=weather,
-        )
-        if self._context_builder.should_use_chat_history(user_message):
-            messages = [*base_messages[:1], *history, {"role": "user", "content": enriched_prompt}]
-        else:
-            messages = base_messages
+    async def reply_stream(self, request: ChatRequest) -> AsyncIterator[str]:
+        started = time.perf_counter()
+        chat_id, messages = await self._prepare_messages(request)
 
         full_reply = ""
         used_fallback = False
@@ -96,16 +98,21 @@ class ChatService:
                 yield chunk
         except Exception:
             used_fallback = True
-            fallback = self._prompt_mgr.build_fallback_reply("最近在认真推进手头任务")
+            fallback = self._prompt_mgr.build_fallback_reply(
+                "最近在认真推进手头任务"
+            )
             full_reply = fallback
             logger.exception(
                 "chat_reply_stream_model_failed",
-                extra={"module_name": "chat", "event": "reply_stream_model_error", "error_code": "LLM_STREAM_FAILED"},
+                extra={
+                    "module_name": "chat",
+                    "event": "reply_stream_model_error",
+                    "error_code": "LLM_STREAM_FAILED",
+                },
             )
             yield fallback
 
-        self._history_store.add_message(chat_id, "user", user_message)
-        self._history_store.add_message(chat_id, "assistant", full_reply)
+        self._save(chat_id, request.message, full_reply)
         duration_ms = int((time.perf_counter() - started) * 1000)
         logger.info(
             "chat_reply_stream_completed",
@@ -116,3 +123,9 @@ class ChatService:
                 "fallback": used_fallback,
             },
         )
+
+    # -- helpers ------------------------------------------------------------------
+
+    def _save(self, chat_id: str, user_message: str, assistant_reply: str) -> None:
+        self._history_store.add_message(chat_id, "user", user_message)
+        self._history_store.add_message(chat_id, "assistant", assistant_reply)

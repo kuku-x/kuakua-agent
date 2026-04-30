@@ -27,7 +27,7 @@ class MilestoneStore:
         occurred_at: datetime | None = None,
     ) -> Milestone:
         occurred = _to_utc_naive(occurred_at) if occurred_at else _utc_now_naive()
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             cursor = await conn.execute(
                 "INSERT INTO milestones (event_type, title, description, occurred_at) VALUES (?, ?, ?, ?)",
                 (event_type, title, description, occurred.isoformat()),
@@ -41,7 +41,7 @@ class MilestoneStore:
 
     async def get_recent(self, hours: int = 24, limit: int = 10) -> list[Milestone]:
         cutoff = _utc_now_naive() - timedelta(hours=hours)
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             async with conn.execute(
                 "SELECT * FROM milestones WHERE occurred_at >= ? ORDER BY occurred_at DESC LIMIT ?",
                 (cutoff.isoformat(), limit),
@@ -51,7 +51,7 @@ class MilestoneStore:
 
     async def get_unrecalled(self, hours: int = 72, limit: int = 5) -> list[Milestone]:
         cutoff = _utc_now_naive() - timedelta(hours=hours)
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             async with conn.execute(
                 "SELECT * FROM milestones WHERE is_recalled = FALSE AND occurred_at >= ? ORDER BY occurred_at DESC LIMIT ?",
                 (cutoff.isoformat(), limit),
@@ -60,12 +60,12 @@ class MilestoneStore:
             return [Milestone.from_row(row) for row in rows]
 
     async def mark_recalled(self, milestone_id: int) -> None:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             await conn.execute("UPDATE milestones SET is_recalled = TRUE WHERE id = ?", (milestone_id,))
             await conn.commit()
 
     async def get_all(self, limit: int = 50) -> list[Milestone]:
-        async with self._db._get_conn() as conn:
+        async with self._db.get_conn() as conn:
             async with conn.execute(
                 "SELECT * FROM milestones ORDER BY occurred_at DESC LIMIT ?",
                 (limit,),

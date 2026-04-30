@@ -25,7 +25,7 @@ def cleanup_older_than(*, days: int = 365, db: Database | None = None, throttle_
     database = db or Database()
     deleted = 0
 
-    with database._get_conn() as conn:
+    with database.get_conn() as conn:
         cur = conn.execute("DELETE FROM phone_usage_events WHERE usage_date < ?", (cutoff_date,))
         deleted += cur.rowcount if cur.rowcount != -1 else 0
         cur = conn.execute("DELETE FROM phone_daily_usage WHERE usage_date < ?", (cutoff_date,))

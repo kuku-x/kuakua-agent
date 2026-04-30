@@ -122,12 +122,12 @@ class Database:
         self.db_path = db_path or DB_PATH
 
     async def init_db(self) -> None:
-        async with self._get_conn() as conn:
+        async with self.get_conn() as conn:
             await conn.executescript(SCHEMA)
             await conn.commit()
 
     @asynccontextmanager
-    async def _get_conn(self):
+    async def get_conn(self):
         conn = await aiosqlite.connect(self.db_path)
         conn.row_factory = aiosqlite.Row
         try:

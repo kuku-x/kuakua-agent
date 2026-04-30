@@ -32,3 +32,4 @@ kuakua_agent.db
 
 # External dependencies
 deps/
+.worktrees/

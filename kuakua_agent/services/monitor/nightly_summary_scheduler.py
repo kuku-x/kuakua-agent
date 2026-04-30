@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-from datetime import date, datetime
+from datetime import datetime
 
 from kuakua_agent.services.ai_engine.nightly_summary_generator import NightlySummaryGenerator
 from kuakua_agent.services.storage_layer import PraiseHistoryStore, PreferenceStore
-from kuakua_agent.services.notification import KokoroTTS, OutputManager, SystemNotifier
+from kuakua_agent.services.notification import FallbackTTS, OutputManager, SystemNotifier
 from kuakua_agent.services.monitor.summary_service import SummaryService
 from kuakua_agent.services.user_behavior.daily_summarizer import DailyUsageSummarizer
 
@@ -31,7 +30,7 @@ class NightlySummaryScheduler:
         self._summary_generator = summary_generator or NightlySummaryGenerator()
         self._output_mgr = OutputManager()
         self._output_mgr.register(SystemNotifier())
-        self._output_mgr.register(KokoroTTS())
+        self._output_mgr.register(FallbackTTS())
         self._running = False
         self._task: asyncio.Task | None = None
 
@@ -111,13 +110,6 @@ class NightlySummaryScheduler:
     def _build_summary_message(self, target_date: str) -> str:
         return self._summary_generator.generate(target_date)
 
-    def _first_app_name(self, items: object) -> str:
-        if not isinstance(items, list) or not items:
-            return ""
-        first = items[0]
-        if not isinstance(first, dict):
-            return ""
-        return str(first.get("name") or "").strip()
 
     def _parse_time(self, value: str) -> tuple[int, int] | None:
         try:

@@ -4,11 +4,9 @@ from datetime import datetime
 from kuakua_agent.services.monitor.scheduler.events import SchedulerEvent, TriggerType
 from kuakua_agent.services.monitor.scheduler.rules import TriggerRule, DEFAULT_RULES
 from kuakua_agent.services.monitor.scheduler.cooldown import CooldownManager
-from kuakua_agent.services.ai_engine import ContextBuilder, ModelAdapter
 from kuakua_agent.services.ai_engine.graph import run_praise_workflow
 from kuakua_agent.services.storage_layer import MilestoneStore, PraiseHistoryStore
-from kuakua_agent.services.notification import KokoroTTS, OutputManager, SystemNotifier
-from kuakua_agent.services.notification.weather import WeatherService
+from kuakua_agent.services.notification import FallbackTTS, OutputManager, SystemNotifier
 from kuakua_agent.services.websocket_manager import ws_manager
 
 logger = logging.getLogger(__name__)
@@ -28,10 +26,7 @@ class PraiseScheduler:
         self._task: asyncio.Task | None = None
         self._output_mgr = OutputManager()
         self._output_mgr.register(SystemNotifier())
-        self._output_mgr.register(KokoroTTS())
-        self._context_builder = ContextBuilder()
-        self._model = ModelAdapter()
-        self._weather = WeatherService()
+        self._output_mgr.register(FallbackTTS())
 
     async def start(self) -> None:
         if self._running:

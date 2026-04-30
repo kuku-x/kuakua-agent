@@ -9,6 +9,7 @@ from kuakua_agent.services.monitor.summary_service import SummaryService
 from kuakua_agent.services.user_behavior.daily_summary_db import DailyUsageSummaryDb
 from kuakua_agent.services.user_behavior.phone_usage_db import PhoneUsageDb
 from kuakua_agent.services.user_behavior.retention import cleanup_older_than
+from kuakua_agent.utils import guess_category
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class DailyUsageSummarizer:
             {
                 "name": e.app_name,
                 "seconds": e.duration_seconds,
-                "category": _guess_category(e.app_name),
+                "category": guess_category(e.app_name),
             }
             for e in sorted(phone_entries, key=lambda x: x.duration_seconds, reverse=True)[:10]
         ]
@@ -106,17 +107,6 @@ class DailyUsageSummarizer:
             logger.exception("Retention cleanup failed (best-effort).")
 
         return DailyUsagePayload(date=date, payload_json=payload_json)
-
-
-def _guess_category(app_name: str) -> str:
-    text = (app_name or "").lower()
-    work_keywords = ("code", "cursor", "vscode", "idea", "pycharm", "terminal", "notion", "obsidian", "excel", "word")
-    entertainment_keywords = ("bilibili", "douyin", "tiktok", "youtube", "netflix", "steam", "game", "music", "spotify")
-    if any(k in text for k in entertainment_keywords):
-        return "entertainment"
-    if any(k in text for k in work_keywords):
-        return "work"
-    return "other"
 
 
 def _build_insights(
