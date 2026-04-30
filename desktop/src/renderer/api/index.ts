@@ -7,6 +7,7 @@ import type {
   SettingsPayload,
   SettingsResponse,
   ActivityWatchStatus,
+  AwStatus,
   SummaryData,
   PraiseConfig,
   MilestoneResponse,
@@ -73,6 +74,7 @@ export async function* sendChatStream(data: ChatRequest): AsyncGenerator<string,
 export const getSettings = () => api.get<SettingsResponse>('/settings')
 export const updateSettings = (data: SettingsPayload) =>
   api.put<ApiResponse<SettingsResponse>>('/settings', data)
+export const getAwStatus = () => api.get<ApiResponse<AwStatus>>('/activitywatch/status')
 export const getActivityWatchStatus = () =>
   api.get<ApiResponse<ActivityWatchStatus>>('/settings/activitywatch/status')
 export const checkActivityWatch = (aw_server_url: string) =>
