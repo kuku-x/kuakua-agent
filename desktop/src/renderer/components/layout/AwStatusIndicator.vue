@@ -2,6 +2,7 @@
   <div class="aw-status" :class="`aw-status--${status}`" @click="$emit('click')">
     <span class="aw-status__dot" :class="{ 'aw-status__dot--pulse': status === 'syncing' }"></span>
     <span class="aw-status__label">{{ label }}</span>
+    <span v-if="lastSyncLabel" class="aw-status__sync-time">{{ lastSyncLabel }}</span>
     <div class="aw-status__actions" @click.stop>
       <button class="aw-status__btn" title="重连" @click="$emit('retry')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -39,7 +40,21 @@ const label = computed(() => {
     case 'connected': return '已连接'
     case 'syncing': return '同步中'
     case 'disconnected': return '已断开'
+    default: return '未知状态'
   }
+})
+
+const lastSyncLabel = computed(() => {
+  if (!props.lastSyncTime) return null
+  const now = new Date()
+  const diffMs = now.getTime() - props.lastSyncTime.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 1) return '刚刚同步'
+  if (diffMins < 60) return `${diffMins}分钟前同步`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}小时前同步`
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays}天前同步`
 })
 </script>
 
@@ -66,9 +81,9 @@ const label = computed(() => {
   flex-shrink: 0;
 }
 
-.aw-status--connected .aw-status__dot { background: #22c55e; }
-.aw-status--syncing .aw-status__dot { background: #eab308; }
-.aw-status--disconnected .aw-status__dot { background: #ef4444; }
+.aw-status--connected .aw-status__dot { background: var(--color-success, #22c55e); }
+.aw-status--syncing .aw-status__dot { background: var(--color-warning, #eab308); }
+.aw-status--disconnected .aw-status__dot { background: var(--color-danger, #ef4444); }
 
 .aw-status__dot--pulse {
   animation: pulse 1.5s ease-in-out infinite;
@@ -83,6 +98,11 @@ const label = computed(() => {
   flex: 1;
   font-size: 13px;
   color: var(--color-text-secondary);
+}
+
+.aw-status__sync-time {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
 }
 
 .aw-status__actions {
