@@ -15,14 +15,14 @@
       <p v-if="error" class="aw-popover__error">{{ error }}</p>
     </div>
     <div class="aw-popover__actions">
-      <button class="aw-popover__action" @click="$emit('retry')">
+      <button type="button" class="aw-popover__action" @click="$emit('retry')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M23 4v6h-6M1 20v-6h6"/>
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
         </svg>
         立即重连
       </button>
-      <button class="aw-popover__action" @click="$emit('openLogs')">
+      <button type="button" class="aw-popover__action" @click="$emit('openLogs')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14,2 14,8 20,8"/>
@@ -31,7 +31,7 @@
         </svg>
         查看日志
       </button>
-      <button class="aw-popover__action" @click="$emit('openSettings')">
+      <button type="button" class="aw-popover__action" @click="$emit('openSettings')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -47,7 +47,7 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   visible: boolean
-  status: 'connected' | 'disconnected'
+  status: 'connected' | 'syncing' | 'disconnected'
   lastSyncTime: Date | null
   error: string | null
 }>()
@@ -59,7 +59,14 @@ defineEmits<{
   openSettings: []
 }>()
 
-const statusLabel = computed(() => props.status === 'connected' ? '已连接' : '已断开')
+const statusLabel = computed(() => {
+  switch (props.status) {
+    case 'connected': return '已连接'
+    case 'syncing': return '同步中'
+    case 'disconnected': return '已断开'
+    default: return '未知状态'
+  }
+})
 
 function formatTime(date: Date): string {
   const now = new Date()
@@ -111,7 +118,7 @@ function formatTime(date: Date): string {
 }
 
 .aw-popover__close:hover {
-  background: var(--color-bg-hover);
+  background: var(--color-bg-active);
 }
 
 .aw-popover__body {
@@ -172,6 +179,6 @@ function formatTime(date: Date): string {
 }
 
 .aw-popover__action:hover {
-  background: var(--color-bg-hover);
+  background: var(--color-bg-active);
 }
 </style>
