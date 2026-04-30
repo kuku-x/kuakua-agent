@@ -103,6 +103,12 @@ export interface ActivityWatchStatus {
   message: string
 }
 
+export interface AwStatus {
+  status: 'connected' | 'disconnected'
+  last_sync: string | null
+  error: string | null
+}
+
 export interface PraiseConfig {
   praise_auto_enable: boolean
   tts_enable: boolean
