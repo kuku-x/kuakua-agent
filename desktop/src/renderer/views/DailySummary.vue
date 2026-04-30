@@ -1,5 +1,16 @@
 <template>
   <section class="summary-page">
+    <!-- Fallback Banner -->
+    <FallbackPraiseBanner
+      v-if="!hasApiKey"
+      :visible="!hasApiKey"
+      @go-to-settings="router.push('/settings')"
+    />
+
+    <!-- Fallback Praise Card -->
+    <FallbackPraiseCard v-if="!hasApiKey" />
+
+    <!-- 现有内容... -->
     <KuCard padding="lg" class="summary-page__hero">
       <div class="summary-page__hero-copy">
         <p class="summary-page__eyebrow">Today in Kuakua</p>
@@ -128,7 +139,10 @@ import KuSpinner from '@/components/base/KuSpinner.vue'
 import SummaryCard from '@/components/business/SummaryCard.vue'
 import TimePieChart from '@/components/widgets/TimePieChart.vue'
 import WeatherCard from '@/components/business/WeatherCard.vue'
+import FallbackPraiseBanner from '@/components/business/FallbackPraiseBanner.vue'
+import FallbackPraiseCard from '@/components/business/FallbackPraiseCard.vue'
 import { useHitokoto } from '@/hooks/useHitokoto'
+import { useApiKeyCheck } from '@/hooks/useApiKeyCheck'
 import { useChatStore } from '@/store/chat'
 import { useSummaryStore } from '@/store/summary'
 import { formatDuration } from '@/utils/format'
@@ -137,6 +151,7 @@ const store = useSummaryStore()
 const chatStore = useChatStore()
 const router = useRouter()
 const { quote, fetchQuote, refreshQuote } = useHitokoto()
+const { hasApiKey, checkApiKey } = useApiKeyCheck()
 
 const quoteText = computed(() => quote.value?.hitokoto || '今天已经很棒了，记得给自己一个微笑。')
 const quoteFrom = computed(() => {
@@ -188,6 +203,7 @@ const phoneUsage = computed(() => {
 })
 
 onMounted(() => {
+  checkApiKey()
   if (!store.summary && !store.loading) {
     store.fetchTodaySummary()
   }
